@@ -1,0 +1,59 @@
+# Trabecc configuration — example.
+# Copy to ./trabecc.yaml or ~/.trabecc/config.yaml and edit.
+
+defaultPolicy: deny
+
+audit:
+  path: ~/.trabecc/audit.db
+  maxRecords: 100000
+  recordArgs: true
+  # Argument keys (and key segments — "github_pat" -> ["github","pat"])
+  # matching any of these are stored as [REDACTED]. The default list covers
+  # password, token, api_key, authorization, etc.
+  redactKeys: []
+
+admin:
+  enabled: true
+  port: 4577
+  bind: 127.0.0.1
+
+servers:
+  - name: filesystem
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+    timeoutMs: 30000
+
+  # - name: github
+  #   command: npx
+  #   args: ["-y", "@modelcontextprotocol/server-github"]
+  #   env:
+  #     GITHUB_PERSONAL_ACCESS_TOKEN: ${GITHUB_TOKEN}
+
+rules:
+  - match: "filesystem__read_*"
+    effect: allow
+    reason: "read-only filesystem access is fine"
+
+  # Argument-level rule: deny any write where the path looks like a
+  # config or secret directory. `when:` predicates are AND-ed.
+  - match: "filesystem__write_*"
+    effect: deny
+    when:
+      path: "/etc/*"
+    reason: "no writes under /etc"
+  - match: "filesystem__write_*"
+    effect: deny
+    when:
+      path: "*/.ssh/*"
+    reason: "no writes under .ssh"
+
+  - match: "filesystem__write_*"
+    effect: deny
+    reason: "writes require human review"
+  - match: "filesystem__*"
+    effect: allow
+
+rateLimits:
+  - match: "filesystem__*"
+    perMinute: 120
+    burst: 30

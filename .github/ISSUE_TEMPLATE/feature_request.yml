@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a new capability for Trabecc.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the user-facing problem?
+      description: Describe the use case before the proposed solution. "I want to do X but Y" is more useful than "Trabecc should do Z."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Optional. How might it work? Sketch the config / CLI / API change.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds, related projects, or why the obvious answer doesn't fit.

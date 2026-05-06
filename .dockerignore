@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+landing
+launch
+tests
+*.log
+audit.db*
+agentgate.yaml
+.agentgate

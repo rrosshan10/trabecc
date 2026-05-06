@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['24.x']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: |
+          node --test \
+            tests/policy.test.ts \
+            tests/namespace.test.ts \
+            tests/ratelimit.test.ts \
+            tests/redact.test.ts \
+            tests/cloud_sync.test.ts
+
+      - name: E2E smoke
+        run: node tests/e2e.smoke.ts
+        env:
+          TRABECC_LOG: warn
+        # The e2e smoke spawns the upstream filesystem MCP server via npx and
+        # talks to the gateway over real stdio MCP. Skipped only if a future
+        # upstream change breaks compatibility unrelated to Trabecc.
+        continue-on-error: false
+
+      - name: Verify CLI starts and exits cleanly
+        run: |
+          cp trabecc.example.yaml trabecc.yaml
+          timeout 5 node src/cli.ts doctor || test $? -eq 0

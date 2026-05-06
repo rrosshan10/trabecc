@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security disclosure
+    url: https://github.com/rrosshan10/trabecc/security/advisories/new
+    about: Please report vulnerabilities privately, not as public issues.
+  - name: Discussions
+    url: https://github.com/rrosshan10/trabecc/discussions
+    about: Questions, ideas, and show-and-tell.

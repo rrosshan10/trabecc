@@ -1,0 +1,68 @@
+{
+  "name": "trabecc",
+  "version": "0.1.0",
+  "description": "The gateway and governance layer for MCP. Audit, policy, and rate-limiting for AI tool calls.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "trabecc": "src/cli.ts"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/cli.ts",
+    "dev": "node --watch src/cli.ts",
+    "test": "node --test tests/policy.test.ts tests/namespace.test.ts tests/ratelimit.test.ts tests/redact.test.ts tests/cloud_sync.test.ts",
+    "test:e2e": "node tests/e2e.smoke.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.ts",
+    "trabecc.example.yaml",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "hono": "^4.6.0",
+    "@hono/node-server": "^1.13.0",
+    "yaml": "^2.5.0",
+    "zod": "^3.23.0",
+    "picocolors": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "agents",
+    "gateway",
+    "proxy",
+    "governance",
+    "audit",
+    "anthropic",
+    "claude",
+    "claude-desktop",
+    "claude-code",
+    "cursor"
+  ],
+  "homepage": "https://trabecc.com",
+  "bugs": {
+    "url": "https://github.com/rrosshan10/trabecc/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rrosshan10/trabecc.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

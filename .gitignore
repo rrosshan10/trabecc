@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.DS_Store
+dist/
+coverage/
+
+# Trabecc runtime artifacts (when run from this directory)
+trabecc.yaml
+audit.db
+audit.db-*
+.trabecc/
