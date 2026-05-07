@@ -2,11 +2,17 @@
 // drive it as a real MCP client. Exercises listTools, an allowed call,
 // and a denied call. Not part of the unit test suite (touches network/
 // child processes), run manually via:  node tests/e2e.smoke.ts
+//
+// Self-sufficient: writes its own throwaway config to a temp dir so it
+// runs identically in CI (where the repo has no trabecc.yaml) and on a
+// developer's machine (where one might exist with custom rules we don't
+// want to read).
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { resolve } from "node:path";
-import { writeFileSync } from "node:fs";
+import { resolve, join } from "node:path";
+import { writeFileSync, readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 async function main() {
   const repoRoot = resolve(import.meta.dirname, "..");
@@ -14,9 +20,19 @@ async function main() {
   // Seed a known file so we can exercise read_file.
   writeFileSync("/tmp/trabecc-smoke.txt", "hello from trabecc\n", "utf8");
 
+  // Stage an isolated config in a temp dir so this test doesn't depend
+  // on repo-root state. The example yaml ships with the package and is
+  // sufficient for the smoke test (filesystem upstream + read/write rules).
+  const tmpRoot = mkdtempSync(join(tmpdir(), "trabecc-smoke-"));
+  const configPath = join(tmpRoot, "trabecc.yaml");
+  writeFileSync(
+    configPath,
+    readFileSync(resolve(repoRoot, "trabecc.example.yaml"), "utf8"),
+  );
+
   const transport = new StdioClientTransport({
     command: "node",
-    args: [resolve(repoRoot, "src/cli.ts"), "run", "--config", resolve(repoRoot, "trabecc.yaml")],
+    args: [resolve(repoRoot, "src/cli.ts"), "run", "--config", configPath],
     env: { ...process.env, TRABECC_LOG: "warn" } as Record<string, string>,
   });
 
@@ -49,6 +65,7 @@ async function main() {
   console.log("denied call message:", deniedResult.content?.[0]?.text);
 
   await client.close();
+  rmSync(tmpRoot, { recursive: true, force: true });
   console.log("\nsmoke test passed");
 }
 

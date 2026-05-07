@@ -49,6 +49,12 @@ jobs:
         continue-on-error: false
 
       - name: Verify CLI starts and exits cleanly
+        # The smoke test above already exercises the gateway end-to-end with
+        # an isolated config. This step independently exercises `doctor`
+        # against the example config to catch regressions in the CLI front
+        # door. Timeout is generous because cold npx downloads of upstream
+        # MCP servers on CI can take 10-15s.
         run: |
           cp trabecc.example.yaml trabecc.yaml
-          timeout 5 node src/cli.ts doctor || test $? -eq 0
+          timeout 60 node src/cli.ts doctor
+          rm trabecc.yaml
