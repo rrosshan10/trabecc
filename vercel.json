@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "_comment": "This file lives at the repo root and ONLY exists to handle the case where Vercel's git integration deploys with Root Directory=/. The actual landing-page config lives in landing/vercel.json. If you set the Vercel project's Root Directory to 'landing' in the dashboard (recommended), this file is ignored.",
+  "buildCommand": "echo \"no-op: this is not a Vercel app — landing page lives in landing/\"",
+  "installCommand": "echo \"no-op\"",
+  "outputDirectory": "landing",
+  "framework": null,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    }
+  ]
+}

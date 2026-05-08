@@ -35,7 +35,7 @@ push to production in one coordinated push when DNS is settled.
       (the registrar bundle handles this automatically if you bought via
       Cloudflare Registrar — otherwise update at the registrar).
 - [ ] Set up Cloudflare Email Routing on `trabecc.com`:
-      `hello@trabecc.com`, `security@trabecc.com`, `conduct@trabecc.com`
+      `support.team@trabecc.com`, `security@trabecc.com`, `conduct@trabecc.com`
       → all forward to your personal inbox.
 
 **End-of-phase check:** GitHub repo public + CI green, DNS at Cloudflare,
@@ -127,7 +127,7 @@ This is the "go live" moment. Confirm DNS propagation first
       `mailto:` links open mail clients with prefilled subjects, GitHub
       buttons go to your repo.
 - [ ] Test the page on a real phone (mobile Safari + Chrome).
-- [ ] Send yourself an email to `hello@trabecc.com` from your phone —
+- [ ] Send yourself an email to `support.team@trabecc.com` from your phone —
       confirm it lands in your inbox.
 - [ ] In Cloudflare DNS: verify the SPF / DKIM records that Email Routing
       added are present.

@@ -101,11 +101,11 @@ Visit `https://trabecc.com` in a browser — the landing page should load over H
 
 Email is *not* automatic on Vercel. Set up forwarding via your registrar or a forwarding service:
 
-**Option A: IONOS Email Forwarding** — log into IONOS, create forwarding for `hello@trabecc.com`, `security@trabecc.com`, `conduct@trabecc.com` → your personal address. IONOS includes this with most domain plans.
+**Option A: IONOS Email Forwarding** — log into IONOS, create forwarding for `support.team@trabecc.com`, `security@trabecc.com`, `conduct@trabecc.com` → your personal address. IONOS includes this with most domain plans.
 
 **Option B: Cloudflare Email Routing (free)** — requires moving DNS to Cloudflare. Skip for now; IONOS Option A is faster.
 
-Send yourself an email to `hello@trabecc.com` from your phone to verify.
+Send yourself an email to `support.team@trabecc.com` from your phone to verify.
 
 ---
 
@@ -113,7 +113,7 @@ Send yourself an email to `hello@trabecc.com` from your phone to verify.
 
 - `https://trabecc.com` serves the landing page over HTTPS
 - `https://www.trabecc.com` redirects to root
-- `mailto:hello@trabecc.com` works on every CTA
+- `mailto:support.team@trabecc.com` works on every CTA
 - `dig trabecc.com` returns Vercel's IP
 - Landing page is fully responsive, no JS dependencies, ~16KB gzipped
 

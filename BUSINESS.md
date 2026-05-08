@@ -26,7 +26,7 @@ production tomorrow when DNS has fully settled and the CDN is ready.**
 2. **In Cloudflare, add `trabecc.com` as a site.** If you bought via
    Cloudflare Registrar, this is automatic. Otherwise update nameservers
    at the registrar. (10 min)
-3. **Set up Cloudflare Email Routing.** Forward `hello@trabecc.com`,
+3. **Set up Cloudflare Email Routing.** Forward `support.team@trabecc.com`,
    `security@trabecc.com`, and `conduct@trabecc.com` to your personal
    inbox. Don't test yet — MX records take a while to propagate. (10 min)
 4. **Configure Cloudflare Pages but don't deploy yet.** Create the
@@ -61,7 +61,7 @@ The single thing this day exists for: get `trabecc.com` live.
 3. **Visit `https://trabecc.com`.** Verify all four `mailto:` CTAs open,
    GitHub buttons resolve, page renders correctly on desktop *and* a
    real phone (not just chrome devtools). (10 min)
-4. **Send `hello@trabecc.com` from your phone.** Confirm it lands in
+4. **Send `support.team@trabecc.com` from your phone.** Confirm it lands in
    your inbox. Repeat for `security@`. (5 min)
 
 **End-of-day check:** Type `trabecc.com` into a browser. The site loads
