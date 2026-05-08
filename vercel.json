@@ -1,8 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "_comment": "This file lives at the repo root and ONLY exists to handle the case where Vercel's git integration deploys with Root Directory=/. The actual landing-page config lives in landing/vercel.json. If you set the Vercel project's Root Directory to 'landing' in the dashboard (recommended), this file is ignored.",
-  "buildCommand": "echo \"no-op: this is not a Vercel app — landing page lives in landing/\"",
-  "installCommand": "echo \"no-op\"",
+  "buildCommand": "echo 'no-op: landing page is in landing/, OSS package builds via npm prepack'",
+  "installCommand": "echo 'no-op'",
   "outputDirectory": "landing",
   "framework": null,
   "headers": [
