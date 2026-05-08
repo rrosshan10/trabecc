@@ -8,60 +8,61 @@ paying customers. Check items off in order. Don't skip ahead.
 
 ---
 
-## Phase 0 — Status (today)
+## Phase 0 — Status (snapshot)
 
 - ✅ Name: **Trabecc**
-- ✅ Domain bought: `trabecc.com`
-- ✅ Repo renamed end-to-end (30/30 tests green, e2e smoke green)
-- ⏳ DNS propagation in flight — typically full within 1-24h
-- ⏳ Production deploy: **wait until all phases below are complete**, then
-      deploy as a single act. Target: tomorrow or the day after.
-
-The plan is to finish every phase locally first, queue everything up, and
-push to production in one coordinated push when DNS is settled.
-
----
-
-## Phase 1 — GitHub + Cloudflare prep (~1 hour, can do now)
-
-- [ ] In `/Users/roshan/Documents/Agent Gate`: `git init && git add -A &&
-      git commit -m "initial commit"`.
-- [ ] Create the public repo at `github.com/rrosshan10/trabecc`, MIT
-      license. Push.
-- [ ] Confirm CI is green on `main` (the `.github/workflows/ci.yml` runs
-      on every push). If it isn't, fix before moving on.
-- [ ] In Cloudflare dashboard: add `trabecc.com` as a site (skip if
-      already imported). Confirm nameservers are pointing at Cloudflare
-      (the registrar bundle handles this automatically if you bought via
-      Cloudflare Registrar — otherwise update at the registrar).
-- [ ] Set up Cloudflare Email Routing on `trabecc.com`:
-      `support.team@trabecc.com`, `security@trabecc.com`, `conduct@trabecc.com`
-      → all forward to your personal inbox.
-
-**End-of-phase check:** GitHub repo public + CI green, DNS at Cloudflare,
-email forwarding configured but not yet tested (the MX records take
-~30 min to propagate).
+- ✅ Domain bought: `trabecc.com` (via IONOS)
+- ✅ Repo renamed end-to-end; 30/30 tests green; e2e smoke green
+- ✅ CI green on `main` (smoke test self-sufficient; doctor timeout fixed)
+- ✅ Production landing page **LIVE** at `https://trabecc.com` (Vercel)
+- ✅ Vercel root `vercel.json` in place to prevent git-deploy from
+      compiling the gateway as if it were the website
+- ✅ npm package published *(when 2FA OTP completes)*
+- 🚧 npm CI publishing path (NPM_TOKEN secret) — not set up yet, can wait
+      until v0.1.1
+- 🚧 Email forwarding at IONOS — `support.team@`, `security@`, `conduct@`
+- 🚧 Dogfood, cold-email list, polish, launch — phases 3-8 below
 
 ---
 
-## Phase 2 — Ship the npm package (Day 2, ~2 hours)
+## Phase 1 — GitHub + DNS + email (~30 min remaining)
 
-- [ ] Create npm account if needed. Enable 2FA (required for `provenance`).
-- [ ] Run `npm view trabecc` → confirm 404. If taken, rename the package
-      in `package.json` (`trabecc-cli` is a fine fallback).
-- [ ] In a fresh clone: `npm install && npm publish --dry-run`. Verify the
-      file list contains no `.env`, `audit.db`, or `trabecc.yaml`.
-- [ ] Add `NPM_TOKEN` secret to GitHub repo settings.
-- [ ] Tag the release: `git tag v0.1.0 && git push --tags`. The
-      `release.yml` workflow auto-publishes.
-- [ ] On a clean machine (Codespaces, friend's laptop, fresh shell):
-      `npx trabecc@latest doctor` should work. If it doesn't, fix
-      *before* the launch.
-- [ ] Confirm the install snippet on the README and landing page still
-      runs verbatim.
+- [x] `git init && git add -A && git commit && git push` on
+      `github.com/rrosshan10/trabecc` (renamed from `Agent-Gate`).
+- [x] CI is green on `main`.
+- [x] DNS for `trabecc.com` lives at IONOS, A record points at Vercel
+      (`216.198.79.1` resolves nationally).
+- [x] Set up **IONOS Email Forwarding** for these aliases →
+      your personal inbox:
+      `support.team@trabecc.com`, `security@trabecc.com`,
+      `conduct@trabecc.com`.
+- [x] Verified forwarding works (test email landed in inbox).
 
-**End-of-day check:** Anyone in the world can `npx trabecc@latest run` and
-get a working gateway.
+**End-of-phase check:** ✅ Email infrastructure live. All four landing-page
+CTAs route to a real inbox you read.
+
+---
+
+## Phase 2 — Ship the npm package
+
+- [x] npm account created with 2FA enabled.
+- [x] `npm view trabecc` returns 404 (name available).
+- [x] `npm pack --dry-run` audit: 21 files, 23.5 KB, no leaks.
+- [x] Hit the `ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING` blocker;
+      fixed by adding `tsconfig.build.json` + `npm prepack` build pipeline
+      that emits `dist/`.
+- [x] Verified install end-to-end from a clean tmp dir
+      (`--help` / `init` / `policy check` / `doctor` all work).
+- [x] `npm publish --no-provenance --otp=…` succeeded.
+- [x] `npx trabecc@latest --help` works on a fresh machine.
+      Package URL: https://www.npmjs.com/package/trabecc
+- [ ] Add `NPM_TOKEN` secret to GitHub repo for v0.1.1+ via CI
+      (Granular Access Token, scope: `trabecc` package, "Bypass 2FA for
+      publishing": yes). Then future releases trigger via
+      `git tag v0.1.x && git push --tags`. Not urgent — manual
+      `npm publish` still works whenever you want to ship a patch.
+
+**End-of-phase check:** ✅ Anyone in the world can `npx trabecc@latest`.
 
 ---
 
@@ -109,31 +110,70 @@ own work, not test data.
 
 ---
 
-## Phase 6 — Deploy production landing page (when DNS is settled, ~30 min)
+## Phase 6 — Production landing page (DONE)
 
-This is the "go live" moment. Confirm DNS propagation first
-(`dig +short A trabecc.com` returns a Cloudflare IP), then deploy.
+Production live on **Vercel** (not Cloudflare Pages — switched because
+DNS stayed at IONOS). State of play:
 
-- [ ] In the Cloudflare dashboard → **Pages** → **Create project** →
-      **Connect to Git** → select the `rrosshan10/trabecc` repo.
-- [ ] Build settings:
-      - Framework preset: **None**
-      - Build command: *(leave blank)*
-      - Build output directory: `landing`
-- [ ] Deploy. First deploy takes ~30s.
-- [ ] Custom domains → add `trabecc.com` and `www.trabecc.com`. Cloudflare
-      auto-issues the cert.
-- [ ] Visit `https://trabecc.com` — confirm landing page loads, all four
-      `mailto:` links open mail clients with prefilled subjects, GitHub
-      buttons go to your repo.
-- [ ] Test the page on a real phone (mobile Safari + Chrome).
-- [ ] Send yourself an email to `support.team@trabecc.com` from your phone —
-      confirm it lands in your inbox.
-- [ ] In Cloudflare DNS: verify the SPF / DKIM records that Email Routing
-      added are present.
+- [x] Vercel project `trabecc` exists under `rrosshan10s-projects`.
+- [x] Production deployment URL aliased to `trabecc.com` and
+      `www.trabecc.com`.
+- [x] Let's Encrypt cert issued for both.
+- [x] `https://www.trabecc.com` returns 200 with the landing page.
+- [x] `https://trabecc.com` 307-redirects to www.
+- [x] Root `vercel.json` prevents the git-deploy auto-detection from
+      compiling the gateway TypeScript as a website.
+- [ ] Real-phone test (open `https://trabecc.com` on your iPhone/Android,
+      scroll the page, tap each CTA — verify the `mailto:` opens your
+      mail client and the GitHub buttons work).
+- [ ] Confirm email forwarding (test from your phone after Phase 1
+      is complete).
 
-**End-of-phase check:** `trabecc.com` is live, mobile-clean, all CTAs work,
-email forwarding tested end-to-end.
+---
+
+## Phase 6.5 — Set up the money rails (~30 min, do this NOW)
+
+The OSS is public; anyone can `npm install -g trabecc`. The cloud product
+is what you sell. You don't need to *build* the cloud product yet — you
+need to be able to *take payment* the moment someone says yes.
+
+**Cost reality:** Stripe basic = **$0 setup, $0 monthly, 2.9% + 30¢ per
+successful charge only.** On a $29 Pro subscription that's $1.14 to
+Stripe. With zero customers your Stripe cost is zero. There is no other
+mainstream processor with lower per-transaction fees at this volume.
+
+- [ ] **Create a Stripe account** at [stripe.com](https://stripe.com).
+      Use `support.team@trabecc.com`. Personal account is fine — payouts
+      go to your bank. **Skip Stripe Atlas** ($500 incorporation product)
+      until you have $2k+ MRR or a customer demands a US entity. **Skip
+      Stripe Tax** until international customers force the issue.
+- [ ] **Create three Products in Stripe**, matching the landing-page
+      tiers:
+      - `Trabecc Pro` — $29 / user / month, recurring
+      - `Trabecc Team` — $99 / user / month, recurring
+      - `Trabecc Enterprise` — custom (use a one-off Invoice each time)
+- [ ] **Generate a Stripe Payment Link** for Pro. Single shareable URL.
+      No code. Customer clicks → enters card → you get an email and the
+      money lands in your Stripe balance.
+- [ ] (Optional, ship later) Replace the `mailto:` CTAs on the landing
+      page with the Stripe Payment Link. For Team/Enterprise, keep
+      `mailto:` so they reach a human first.
+- [ ] **Set up a Stripe webhook** to email you on every successful
+      payment. Until you have 5+ paying customers, you respond
+      personally to each one.
+
+**End-of-phase check:** You can send anyone a single URL. They click it,
+enter a card, and you have $29 in your Stripe balance. No SaaS code yet,
+just billing infrastructure.
+
+### When (not) to switch payment processors later
+
+| Trigger | Switch to |
+| --- | --- |
+| < 50 customers | Stay on Stripe |
+| 50+ customers across many countries; tax compliance > 2 hr/mo | **Lemon Squeezy** or **Polar.sh** as Merchant of Record (~5% per-tx but they handle VAT) |
+| Enterprise customers paying > $5k/yr | Stripe Invoice (still Stripe; just send a one-off invoice instead of a subscription) |
+| Customer hands you a wire transfer | Take the money, send a paper invoice. Don't optimize for these — celebrate them. |
 
 ---
 
@@ -180,14 +220,19 @@ Run the timing in [launch/CHECKLIST.md](launch/CHECKLIST.md). Summary:
 
 ## Phase 10 — First revenue (Week 2-3)
 
-- [ ] Set up a **Stripe** account. Skip the subscription product for now —
-      use Stripe Invoices instead. Free, no UI to build, just generate a
-      payment link per customer.
-- [ ] Convert your 1-2 verbal pre-launch yeses into invoices.
+Stripe is already wired up from Phase 6.5. This phase is about *converting
+intent to dollars*.
+
+- [ ] Convert your 1-2 verbal pre-launch yeses into Stripe Payment Link
+      checkouts.
 - [ ] On the first paid invoice: post a screenshot (numbers blurred) on
       X. "First $X. Onward." This is content for future investors.
 - [ ] On every paid customer (#1 through #5): schedule a 30-min call
-      *the week they sign up*. They will tell you what to build next.
+      *the week they sign up*. They will tell you what to build next —
+      and "what they'd pay another $50/mo for" sets your roadmap.
+- [ ] When customer #5 signs up, **start building the cloud control
+      plane** (Phase 11). Before that, you don't have signal — after
+      that, you do.
 
 ---
 

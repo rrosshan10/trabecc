@@ -124,12 +124,20 @@ export function renderDashboard(props: {
   <style>${STYLE}</style>
 </head><body>
   <header>
-    <div>
-      <h1>Trabecc</h1>
-      <div class="sub">
-        gateway for MCP · default policy: <code>${escapeHtml(config.defaultPolicy)}</code> ·
-        ${config.servers.length} upstream${config.servers.length === 1 ? "" : "s"} ·
-        ${config.rules.length} rule${config.rules.length === 1 ? "" : "s"}
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="width:36px; height:36px; flex-shrink:0;">
+        <rect width="64" height="64" rx="14" fill="#11151a" stroke="#1f2937" stroke-width="1"/>
+        <rect x="12" y="14" width="40" height="7" rx="2" fill="#93c5fd"/>
+        <rect x="28.5" y="14" width="7" height="36" rx="1.5" fill="#93c5fd"/>
+        <rect x="20" y="46" width="24" height="5" rx="1.5" fill="#93c5fd" opacity="0.65"/>
+      </svg>
+      <div>
+        <h1 style="margin:0;">Trabecc</h1>
+        <div class="sub" style="margin:0;">
+          gateway for MCP · default policy: <code>${escapeHtml(config.defaultPolicy)}</code> ·
+          ${config.servers.length} upstream${config.servers.length === 1 ? "" : "s"} ·
+          ${config.rules.length} rule${config.rules.length === 1 ? "" : "s"}
+        </div>
       </div>
     </div>
     <div class="sub">last ${windowMinutes}m · refreshing every ${refreshSeconds}s</div>

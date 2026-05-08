@@ -1,0 +1,71 @@
+<!--
+  Trabecc social preview card. 1200x630 — the standard for Open Graph
+  (Twitter / Facebook / LinkedIn / Slack / Discord all support this size).
+  Reads as: name, tagline, descriptive H1. Same dark theme as the landing
+  page so the visual transition feels continuous.
+
+  Tools that ingest the og:image:
+    - Twitter: cropped to 2:1 — fine, our content is centered
+    - LinkedIn: shows full
+    - Slack/Discord/Telegram: shows full
+    - HN: doesn't render images, so this is bonus territory
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Background -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1a2638" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#0b0d10" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0b0d10"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- subtle grid pattern -->
+  <g opacity="0.06" stroke="#93c5fd" stroke-width="1">
+    <line x1="0" y1="158" x2="1200" y2="158"/>
+    <line x1="0" y1="316" x2="1200" y2="316"/>
+    <line x1="0" y1="474" x2="1200" y2="474"/>
+    <line x1="240" y1="0" x2="240" y2="630"/>
+    <line x1="480" y1="0" x2="480" y2="630"/>
+    <line x1="720" y1="0" x2="720" y2="630"/>
+    <line x1="960" y1="0" x2="960" y2="630"/>
+  </g>
+
+  <!-- Symbol (large, top-left) -->
+  <g transform="translate(80, 80)">
+    <rect width="96" height="96" rx="22" fill="#11151a"/>
+    <rect x="18" y="21" width="60" height="11" rx="3" fill="#93c5fd"/>
+    <rect x="42.75" y="21" width="10.5" height="54" rx="2.5" fill="#93c5fd"/>
+    <rect x="30" y="69" width="36" height="7.5" rx="2.25" fill="#93c5fd" opacity="0.65"/>
+  </g>
+
+  <!-- Wordmark (top-left, beside symbol) -->
+  <text x="200" y="148"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="56" font-weight="700" letter-spacing="-0.025em" fill="#ffffff">trabecc</text>
+
+  <!-- Tagline pill -->
+  <g transform="translate(80, 240)">
+    <rect width="240" height="40" rx="20" fill="#93c5fd" fill-opacity="0.10" stroke="#93c5fd" stroke-opacity="0.25"/>
+    <text x="22" y="26"
+          font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+          font-size="15" font-weight="600" letter-spacing="0.04em" fill="#93c5fd">v0.1 · open-source · MIT</text>
+  </g>
+
+  <!-- Hero headline -->
+  <text x="80" y="370"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="76" font-weight="700" letter-spacing="-0.025em" fill="#ffffff">The gateway for every</text>
+  <text x="80" y="450"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="76" font-weight="700" letter-spacing="-0.025em" fill="#ffffff">AI tool call.</text>
+
+  <!-- Footer slogan -->
+  <text x="80" y="540"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="24" font-weight="500" fill="#9ca3af">Trust, but audit.</text>
+  <text x="80" y="572"
+        font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+        font-size="20" font-weight="400" fill="#34d399">trabecc.com</text>
+</svg>
