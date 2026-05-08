@@ -6,6 +6,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-08
+
+### Fixed
+- `trabecc admin` no longer errors with `"unable to open database file"` on
+  fresh installs. The admin server opens the audit DB read-only; on first
+  run (before the gateway has ever written anything) the file doesn't yet
+  exist and SQLite refuses to create it in read-only mode. The store now
+  bootstraps an empty schema on this path before completing the read-only
+  open. Hit during dogfood setup. Regression test added.
+
 ## [0.1.0] - 2026-04-30
 
 Initial public release.

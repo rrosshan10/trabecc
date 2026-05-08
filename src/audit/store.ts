@@ -10,7 +10,7 @@
 //     multi-reader/single-writer correctly with WAL mode enabled.
 
 import { DatabaseSync } from "node:sqlite";
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolve as resolvePath } from "node:path";
@@ -31,7 +31,25 @@ export class AuditStore {
   ) {
     this.path = path;
     this.opts = opts;
-    if (!opts.readOnly) mkdirSync(dirname(path), { recursive: true });
+    // Always ensure the parent dir exists — even read-only callers (the
+    // admin server) need the dir on disk for the bootstrap path below.
+    mkdirSync(dirname(path), { recursive: true });
+
+    // Read-only first-run: SQLite refuses to create files in read-only
+    // mode, but it's legitimate to ask for the dashboard before the
+    // gateway has ever run. Bootstrap an empty schema in write mode, close,
+    // then continue to the read-only open path below.
+    if (opts.readOnly && !existsSync(path)) {
+      const bootstrap = new DatabaseSync(path, { readOnly: false });
+      try {
+        bootstrap.exec("PRAGMA journal_mode = WAL;");
+        bootstrap.exec("PRAGMA synchronous = NORMAL;");
+        bootstrap.exec(readFileSync(SCHEMA_PATH, "utf8"));
+      } finally {
+        bootstrap.close();
+      }
+    }
+
     this.db = new DatabaseSync(path, { readOnly: opts.readOnly ?? false });
     // WAL gives us concurrent readers + a single writer without blocking.
     if (!opts.readOnly) {
