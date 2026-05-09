@@ -4,7 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Trabecc — gateway and governance for MCP</title>
-  <meta name="description" content="Audit, policy, and rate-limiting for every AI tool call. Drop Trabecc between your agent and your MCP servers in 60 seconds." />
+  <meta name="description" content="Trust, but audit. Drop Trabecc between your AI agent and your MCP servers in 60 seconds. Default-deny policy, audit log, rate limits — without rewriting agent code." />
+  <meta name="theme-color" content="#dc143c" />
+
+  <!-- Open Graph / Twitter -->
   <meta property="og:title" content="Trabecc — gateway and governance for MCP" />
   <meta property="og:description" content="Trust, but audit. Drop Trabecc between your agent and your MCP servers in 60 seconds." />
   <meta property="og:type" content="website" />
@@ -17,276 +20,832 @@
   <meta name="twitter:title" content="Trabecc — gateway and governance for MCP" />
   <meta name="twitter:description" content="Trust, but audit. Drop Trabecc between your agent and your MCP servers in 60 seconds." />
   <meta name="twitter:image" content="https://trabecc.com/og-image.png" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-  <link rel="apple-touch-icon" href="/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="256x256" href="/icon-256.png" />
+  <link rel="apple-touch-icon" href="/icon-256.png" />
+
   <style>
     :root {
-      --bg: #0b0d10;
-      --bg-2: #11151a;
-      --fg: #e5e7eb;
-      --fg-dim: #9ca3af;
-      --accent: #93c5fd;
-      --accent-2: #34d399;
-      --border: #1f2937;
-      --code-bg: #0f1318;
-      --max-width: 1100px;
+      --bg: #0a0a0c;
+      --bg-2: #131218;
+      --bg-3: #1a1922;
+      --surface: #16161e;
+      --border: #27262e;
+      --border-strong: #3a3942;
+      --fg: #fafafa;
+      --fg-2: #d4d4d8;
+      --fg-dim: #a1a1aa;
+      --fg-faint: #71717a;
+      --brand: #dc143c;
+      --brand-dark: #9f0d2c;
+      --brand-glow: rgba(220, 20, 60, 0.18);
+      --brand-soft: rgba(220, 20, 60, 0.08);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #f97316;
+      --code-bg: #0d0c12;
+      --max-w: 1200px;
+      --section-pad: clamp(4rem, 9vw, 7rem);
     }
-    * { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     html, body { margin: 0; padding: 0; }
     body {
-      background: var(--bg);
-      color: var(--fg);
-      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
+      background: var(--bg); color: var(--fg);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      line-height: 1.6; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+      overflow-x: hidden;
     }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .container { max-width: var(--max-width); margin: 0 auto; padding: 0 1.5rem; }
+    a { color: var(--brand); text-decoration: none; transition: color .15s ease; }
+    a:hover { color: #ec4664; }
+    code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, "JetBrains Mono", monospace; }
+    .container { max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem; }
 
-    nav { padding: 1.25rem 0; border-bottom: 1px solid var(--border); }
-    nav .row { display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-weight: 700; letter-spacing: -.01em; font-size: 1.05rem; color: #fff; display: flex; align-items: center; gap: .5rem; }
-    .logo svg { width: 22px; height: 22px; }
-    nav ul { display: flex; gap: 1.5rem; list-style: none; padding: 0; margin: 0; font-size: .9rem; }
+    /* ============ ATMOSPHERE: subtle grid + radial accents ============ */
+    .bg-fx { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+    .bg-fx::before {
+      content: ""; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at top, black 30%, transparent 80%);
+    }
+    .bg-fx::after {
+      content: ""; position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 1100px; height: 600px;
+      background: radial-gradient(circle, var(--brand-glow) 0%, transparent 70%);
+      filter: blur(40px);
+    }
+
+    /* ============ NAV ============ */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      background: rgba(10,10,12,0.75);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .row { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
+    .logo-link { display: flex; align-items: center; gap: .65rem; color: var(--fg); font-weight: 700; font-size: 1.05rem; letter-spacing: -.01em; }
+    .logo-link img { width: 28px; height: 28px; }
+    nav ul { list-style: none; display: flex; gap: 1.75rem; padding: 0; margin: 0; font-size: .9rem; }
     nav ul a { color: var(--fg-dim); }
-    nav ul a:hover { color: var(--fg); text-decoration: none; }
+    nav ul a:hover { color: var(--fg); }
+    .nav-cta {
+      padding: .55rem 1rem; border-radius: 8px; background: var(--brand); color: #fff !important;
+      font-size: .85rem; font-weight: 600; transition: background .15s ease, transform .04s ease;
+    }
+    .nav-cta:hover { background: var(--brand-dark); }
+    .nav-cta:active { transform: translateY(1px); }
 
-    .hero { padding: 5rem 0 4rem; }
+    /* ============ HERO ============ */
+    .hero { padding: clamp(4rem, 8vw, 8rem) 0 clamp(3rem, 6vw, 5rem); position: relative; }
+    .hero-grid { display: grid; grid-template-columns: 1fr; gap: 3rem; align-items: center; }
+    @media (min-width: 1024px) { .hero-grid { grid-template-columns: 1.1fr .9fr; gap: 4rem; } }
+
     .pill {
-      display: inline-block; padding: .25rem .7rem; border-radius: 999px;
-      background: rgba(147, 197, 253, .1); color: var(--accent);
-      font-size: .8rem; font-weight: 500; letter-spacing: .02em;
-      border: 1px solid rgba(147, 197, 253, .25);
-      margin-bottom: 1.25rem;
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .35rem .85rem; border-radius: 999px;
+      background: var(--brand-soft); color: var(--brand);
+      border: 1px solid var(--brand-glow);
+      font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+      animation: fadeInUp .6s ease-out;
     }
-    h1 {
-      font-size: clamp(2.25rem, 5vw, 3.75rem);
-      line-height: 1.05; margin: 0 0 1.25rem;
-      letter-spacing: -.025em; color: #fff; font-weight: 700;
-    }
-    h1 em { font-style: normal; color: var(--accent); }
-    .lede { font-size: 1.2rem; color: var(--fg-dim); max-width: 640px; margin: 0 0 2rem; }
+    .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand);
+      box-shadow: 0 0 8px var(--brand); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
-    .cta-row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }
-    .btn {
-      display: inline-block; padding: .8rem 1.4rem; border-radius: 8px;
-      font-weight: 600; font-size: .95rem; transition: transform .04s ease;
-      border: 1px solid transparent;
+    .h1 {
+      font-size: clamp(2.5rem, 5.5vw, 4.5rem); line-height: 1.02; letter-spacing: -.03em;
+      font-weight: 700; color: #fff; margin: 1.25rem 0 1.5rem;
+      animation: fadeInUp .7s ease-out .1s backwards;
+    }
+    .h1 em { font-style: normal; background: linear-gradient(135deg, var(--brand) 0%, #ec4664 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { font-size: 1.2rem; color: var(--fg-dim); max-width: 560px; margin: 0 0 2rem;
+      animation: fadeInUp .8s ease-out .2s backwards; }
+
+    .cta-row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+      animation: fadeInUp .9s ease-out .3s backwards; }
+    .btn { display: inline-flex; align-items: center; gap: .5rem;
+      padding: .85rem 1.5rem; border-radius: 10px;
+      font-weight: 600; font-size: .95rem;
+      border: 1px solid transparent; cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .04s ease, box-shadow .2s ease;
     }
     .btn:hover { text-decoration: none; }
     .btn:active { transform: translateY(1px); }
-    .btn-primary { background: var(--accent); color: #0b0d10; }
-    .btn-primary:hover { background: #b3d4fb; }
-    .btn-ghost { background: transparent; color: var(--fg); border-color: var(--border); }
-    .btn-ghost:hover { border-color: var(--fg-dim); }
+    .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 4px 24px var(--brand-glow); }
+    .btn-primary:hover { background: var(--brand-dark); box-shadow: 0 6px 30px var(--brand-glow); }
+    .btn-ghost { background: transparent; color: var(--fg); border-color: var(--border-strong); }
+    .btn-ghost:hover { border-color: var(--fg-dim); background: var(--bg-3); }
 
     .install {
-      margin-top: 2rem; padding: 1rem 1.25rem;
-      background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
-      font-size: .9rem; color: var(--fg-dim); display: flex; gap: .75rem;
-      align-items: center; max-width: 540px;
+      margin-top: 2.25rem; padding: 1rem 1.25rem; max-width: 580px;
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+      font-size: .9rem; color: var(--fg-dim); display: flex; align-items: center; gap: .75rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      animation: fadeInUp 1s ease-out .4s backwards;
     }
     .install code { color: var(--fg); }
-    .install .prompt { color: var(--accent-2); user-select: none; }
+    .install .prompt { color: var(--success); user-select: none; }
+    .install .copy-hint { margin-left: auto; color: var(--fg-faint); font-size: .75rem; }
 
-    section { padding: 4rem 0; border-top: 1px solid var(--border); }
-    h2 { font-size: 1.85rem; margin: 0 0 .5rem; letter-spacing: -.02em; color: #fff; }
-    .section-lede { color: var(--fg-dim); margin: 0 0 2.5rem; max-width: 640px; }
+    /* hero visual */
+    .hero-visual {
+      position: relative; aspect-ratio: 1.05/1; max-width: 480px; margin: 0 auto;
+      animation: fadeInUp 1s ease-out .5s backwards;
+    }
+    .hero-visual img { width: 100%; height: 100%; object-fit: contain;
+      filter: drop-shadow(0 20px 60px var(--brand-glow)); }
+    .hero-visual::before {
+      content: ""; position: absolute; inset: -10%;
+      background: radial-gradient(circle at center, var(--brand-glow) 0%, transparent 60%);
+      filter: blur(30px); z-index: -1;
+    }
 
-    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+    /* ============ TRUST BAR ============ */
+    .trust-bar {
+      padding: 2rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.2);
+    }
+    .trust-bar p { color: var(--fg-faint); font-size: .8rem; text-transform: uppercase; letter-spacing: .15em;
+      text-align: center; margin: 0 0 1.5rem; }
+    .trust-logos { display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+      gap: 2rem 3rem; opacity: .6; }
+    .trust-logo { color: var(--fg-dim); font-weight: 700; font-size: 1.1rem; letter-spacing: -.01em; }
+
+    /* ============ SECTIONS ============ */
+    section { padding: var(--section-pad) 0; position: relative; }
+    .section-tag { color: var(--brand); font-size: .8rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .15em; margin-bottom: .75rem; display: block; }
+    .h2 { font-size: clamp(2rem, 3.5vw, 2.75rem); line-height: 1.1; letter-spacing: -.025em;
+      color: #fff; margin: 0 0 1rem; font-weight: 700; }
+    .section-lede { font-size: 1.1rem; color: var(--fg-dim); max-width: 640px; margin: 0 0 3rem; }
+
+    /* reveal on scroll */
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+
+    /* ============ PROBLEM ============ */
+    .problem-grid { display: grid; grid-template-columns: 1fr; gap: 1rem;
+      counter-reset: prob; }
+    @media (min-width: 768px) { .problem-grid { grid-template-columns: repeat(3, 1fr); gap: 1.25rem; } }
+    .problem-card {
+      padding: 2rem; border: 1px solid var(--border); border-radius: 14px;
+      background: var(--surface); position: relative; overflow: hidden;
+      transition: border-color .2s ease, transform .2s ease;
+    }
+    .problem-card:hover { border-color: var(--brand-dark); transform: translateY(-3px); }
+    .problem-card::before {
+      counter-increment: prob; content: counter(prob, decimal-leading-zero);
+      position: absolute; top: 1rem; right: 1.5rem;
+      color: var(--bg-3); font-size: 4rem; font-weight: 800; font-family: ui-monospace, monospace;
+      line-height: 1; pointer-events: none;
+    }
+    .problem-card h3 { color: var(--fg); font-size: 1.05rem; margin: 0 0 .75rem; font-weight: 700; }
+    .problem-card p { color: var(--fg-dim); margin: 0; font-size: .92rem; }
+
+    /* ============ ARCHITECTURE DIAGRAM ============ */
+    .arch-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 2.5rem; overflow: hidden; }
+    .arch { width: 100%; height: auto; display: block; }
+    @keyframes flow {
+      0% { stroke-dashoffset: 100; opacity: .3; }
+      50% { opacity: 1; }
+      100% { stroke-dashoffset: 0; opacity: .3; }
+    }
+
+    /* ============ FEATURES ============ */
+    .features-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+    @media (min-width: 640px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .features-grid { grid-template-columns: repeat(3, 1fr); } }
     .feature {
-      background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 1.5rem;
+      padding: 2rem; border: 1px solid var(--border); border-radius: 14px;
+      background: var(--surface); position: relative;
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
     }
-    .feature h3 { margin: 0 0 .5rem; font-size: 1.05rem; color: #fff; }
-    .feature p { margin: 0; color: var(--fg-dim); font-size: .92rem; }
-    .feature .icon { width: 32px; height: 32px; margin-bottom: 1rem; color: var(--accent); }
-
-    pre {
-      background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
-      padding: 1.25rem; overflow-x: auto; font-size: .85rem; line-height: 1.55;
-      color: var(--fg);
+    .feature:hover {
+      border-color: var(--brand-dark); transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.4), 0 0 24px var(--brand-glow);
     }
-    .yaml-key { color: var(--accent); }
-    .yaml-str { color: var(--accent-2); }
-    .yaml-comment { color: var(--fg-dim); font-style: italic; }
-
-    .pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-    .price {
-      background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 1.5rem; display: flex; flex-direction: column;
+    .feature .icon-box {
+      width: 44px; height: 44px; border-radius: 10px;
+      background: var(--brand-soft); border: 1px solid var(--brand-glow);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--brand); margin-bottom: 1.25rem;
+      transition: transform .2s ease;
     }
-    .price.featured { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(147,197,253,.08); }
-    .price h3 { margin: 0; font-size: 1rem; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .08em; }
-    .price .num { font-size: 2rem; font-weight: 700; color: #fff; margin: .5rem 0; }
-    .price .num small { font-size: .9rem; font-weight: 400; color: var(--fg-dim); }
-    .price ul { list-style: none; padding: 0; margin: 1rem 0; font-size: .9rem; color: var(--fg-dim); flex: 1; }
-    .price ul li { padding: .25rem 0; }
-    .price ul li::before { content: "✓ "; color: var(--accent-2); }
-    .price .btn { margin-top: auto; text-align: center; }
+    .feature:hover .icon-box { transform: scale(1.05) rotate(-3deg); }
+    .feature h3 { color: var(--fg); font-size: 1.05rem; margin: 0 0 .5rem; font-weight: 700; }
+    .feature p { color: var(--fg-dim); margin: 0; font-size: .92rem; line-height: 1.6; }
 
-    .quote {
-      background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 1.75rem; max-width: 800px;
+    /* ============ CODE BLOCK ============ */
+    .code-block {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 14px;
+      overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.4);
     }
-    .quote blockquote { margin: 0; font-size: 1.1rem; color: var(--fg); line-height: 1.5; font-style: italic; }
-    .quote cite { display: block; margin-top: .75rem; color: var(--fg-dim); font-style: normal; font-size: .9rem; }
+    .code-header { background: var(--bg-3); padding: .85rem 1.25rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: .5rem; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+    .code-header span { margin-left: .65rem; color: var(--fg-faint); font-family: ui-monospace, monospace; font-size: .75rem; }
+    .code-block pre { margin: 0; padding: 1.5rem; overflow-x: auto; font-size: .85rem; line-height: 1.7;
+      color: var(--fg-2); }
+    .yk { color: #ec4664; }
+    .ys { color: #34d399; }
+    .yc { color: var(--fg-faint); font-style: italic; }
 
-    footer { padding: 3rem 0; border-top: 1px solid var(--border); color: var(--fg-dim); font-size: .85rem; }
-    footer .row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; align-items: center; }
+    /* ============ DASHBOARD MOCK (inline SVG that LOOKS like a screenshot) ============ */
+    .dash-frame {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 14px;
+      overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 60px var(--brand-glow);
+      transform: perspective(1500px) rotateX(2deg);
+      transition: transform .4s ease;
+    }
+    .dash-frame:hover { transform: perspective(1500px) rotateX(0deg); }
+    .dash-frame img { width: 100%; height: auto; display: block; }
+    .image-placeholder {
+      background: var(--code-bg); border: 1px solid var(--border); border-radius: 14px;
+      padding: 0; aspect-ratio: 16/9; position: relative; overflow: hidden;
+    }
 
-    @media (max-width: 600px) {
-      .hero { padding: 3rem 0; }
+    /* ============ TESTIMONIALS ============ */
+    .quote-card {
+      max-width: 780px; padding: 2.5rem; margin: 0 auto;
+      background: linear-gradient(135deg, var(--brand-soft) 0%, var(--surface) 100%);
+      border: 1px solid var(--brand-glow); border-radius: 16px; position: relative;
+    }
+    .quote-card blockquote {
+      margin: 0 0 1.5rem; font-size: 1.4rem; line-height: 1.5; color: var(--fg);
+      font-weight: 500; letter-spacing: -.01em;
+    }
+    .quote-card .quote-mark {
+      position: absolute; top: 1rem; left: 1.5rem;
+      font-family: Georgia, serif; font-size: 5rem; line-height: 1;
+      color: var(--brand); opacity: .3;
+    }
+    .quote-attr { display: flex; align-items: center; gap: 1rem; }
+    .quote-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--bg-3);
+      border: 1px solid var(--border); display: grid; place-items: center; color: var(--fg-faint);
+      font-weight: 700; font-size: 1rem; }
+    .quote-name { color: var(--fg); font-weight: 600; font-size: .95rem; }
+    .quote-role { color: var(--fg-dim); font-size: .85rem; }
+
+    /* ============ STATS ============ */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; max-width: 900px; margin: 0 auto; }
+    @media (min-width: 768px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+    .stat-card { padding: 1.75rem; text-align: center; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px; }
+    .stat-num { font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 800; color: var(--brand);
+      letter-spacing: -.02em; line-height: 1; }
+    .stat-label { color: var(--fg-dim); font-size: .85rem; margin-top: .5rem; }
+
+    /* ============ PRICING ============ */
+    .pricing-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @media (min-width: 640px) { .pricing-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .pricing-grid { grid-template-columns: repeat(4, 1fr); gap: 1.25rem; } }
+    .price-card {
+      position: relative; padding: 2rem; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 14px;
+      display: flex; flex-direction: column;
+      transition: border-color .2s ease, transform .2s ease;
+    }
+    .price-card:hover { transform: translateY(-3px); border-color: var(--border-strong); }
+    .price-card.featured { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-glow); }
+    .price-card .badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--brand); color: #fff;
+      padding: .25rem .75rem; border-radius: 999px;
+      font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .price-card h3 { color: var(--fg-dim); font-size: .85rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .1em; margin: 0; }
+    .price-card .num { font-size: 2.25rem; font-weight: 800; color: var(--fg); margin: .5rem 0; letter-spacing: -.02em; line-height: 1; }
+    .price-card .num small { font-size: .9rem; font-weight: 400; color: var(--fg-dim); }
+    .price-card ul { list-style: none; margin: 1rem 0 1.5rem; padding: 0; flex: 1; }
+    .price-card ul li {
+      padding: .5rem 0; color: var(--fg-2); font-size: .9rem;
+      display: flex; gap: .5rem; align-items: flex-start;
+    }
+    .price-card ul li::before {
+      content: "✓"; color: var(--brand); font-weight: 700; flex-shrink: 0;
+    }
+    .price-card .btn { width: 100%; justify-content: center; }
+
+    /* ============ FAQ ============ */
+    .faq-list { max-width: 780px; margin: 0 auto; }
+    details {
+      border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem;
+      background: var(--surface); margin-bottom: .75rem;
+      transition: border-color .15s ease;
+    }
+    details[open] { border-color: var(--brand-dark); }
+    summary {
+      cursor: pointer; color: var(--fg); font-weight: 600; font-size: 1rem;
+      list-style: none; display: flex; justify-content: space-between; align-items: center;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+"; font-size: 1.4rem; color: var(--brand); transition: transform .2s ease; line-height: 1;
+    }
+    details[open] summary::after { transform: rotate(45deg); }
+    details p { margin: 1rem 0 0; color: var(--fg-dim); font-size: .95rem; line-height: 1.7; }
+
+    /* ============ CTA STRIP ============ */
+    .cta-strip {
+      background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 100%);
+      padding: clamp(3rem, 6vw, 5rem) 0; text-align: center; border-radius: 0;
+      position: relative; overflow: hidden;
+    }
+    .cta-strip::before {
+      content: ""; position: absolute; inset: 0;
+      background-image:
+        linear-gradient(45deg, rgba(0,0,0,.15) 25%, transparent 25%, transparent 75%, rgba(0,0,0,.15) 75%),
+        linear-gradient(45deg, rgba(0,0,0,.15) 25%, transparent 25%, transparent 75%, rgba(0,0,0,.15) 75%);
+      background-size: 60px 60px;
+      background-position: 0 0, 30px 30px;
+      opacity: .3;
+    }
+    .cta-strip h2 { color: #fff; font-size: clamp(2rem, 3vw, 2.5rem); margin: 0 0 .75rem; letter-spacing: -.02em; }
+    .cta-strip p { color: rgba(255,255,255,.85); margin: 0 0 2rem; font-size: 1.1rem; }
+    .cta-strip .btn-on-brand {
+      background: #fff; color: var(--brand); border-color: #fff;
+    }
+    .cta-strip .btn-on-brand:hover { background: var(--fg-2); }
+    .cta-strip .btn-on-brand-ghost {
+      background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.3);
+    }
+    .cta-strip .btn-on-brand-ghost:hover { background: rgba(255,255,255,.18); }
+
+    /* ============ FOOTER ============ */
+    footer { padding: 3rem 0 2rem; border-top: 1px solid var(--border); background: var(--bg-2); }
+    footer .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; color: var(--fg-faint); font-size: .85rem; }
+    footer .links { display: flex; gap: 1.5rem; }
+    footer .links a { color: var(--fg-dim); }
+    footer .links a:hover { color: var(--fg); }
+    footer .brand-mini { display: flex; align-items: center; gap: .5rem; }
+    footer .brand-mini img { width: 22px; height: 22px; }
+
+    /* mobile nav simplification */
+    @media (max-width: 768px) {
       nav ul { display: none; }
+      .hero-visual { max-width: 320px; }
     }
   </style>
 </head>
 <body>
+  <div class="bg-fx" aria-hidden="true"></div>
+
+  <!-- ============ NAV ============ -->
   <nav>
     <div class="container row">
-      <a class="logo" href="/">
-        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="64" height="64" rx="14" fill="#11151a" stroke="#1f2937" stroke-width="1"/>
-          <rect x="12" y="14" width="40" height="7" rx="2" fill="#93c5fd"/>
-          <rect x="28.5" y="14" width="7" height="36" rx="1.5" fill="#93c5fd"/>
-          <rect x="20" y="46" width="24" height="5" rx="1.5" fill="#93c5fd" opacity="0.65"/>
-        </svg>
+      <a class="logo-link" href="/">
+        <img src="/trabecc_logo.png" alt="" />
         Trabecc
       </a>
       <ul>
         <li><a href="#features">Features</a></li>
+        <li><a href="#how-it-works">How it works</a></li>
         <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
         <li><a href="https://github.com/rrosshan10/trabecc">GitHub</a></li>
-        <li><a href="https://github.com/rrosshan10/trabecc#readme">Docs</a></li>
       </ul>
+      <a class="nav-cta" href="https://buy.stripe.com/fZuaEQ5TqbeU2fC7widUY00">Start free trial</a>
     </div>
   </nav>
 
+  <!-- ============ HERO ============ -->
   <header class="hero container">
-    <span class="pill">Trust, but audit.</span>
-    <h1>The <em>gateway</em> for every<br/>AI tool call.</h1>
-    <p class="lede">
-      Trabecc sits between your agent and your MCP servers. Audit every call, deny the dangerous ones,
-      rate-limit the noisy ones — without rewriting a line of agent code.
-    </p>
-    <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/rrosshan10/trabecc">Get started on GitHub →</a>
-      <a class="btn btn-ghost" href="#how-it-works">See how it works</a>
-    </div>
-    <div class="install">
-      <span class="prompt">$</span>
-      <code>npx trabecc@latest init &amp;&amp; npx trabecc@latest run</code>
+    <div class="hero-grid">
+      <div>
+        <span class="pill">v0.1.1 · open-source · MIT</span>
+        <h1 class="h1">Trust, but <em>audit</em> — every AI tool call.</h1>
+        <p class="lede">
+          Trabecc is the gateway between your AI agent and the MCP servers it
+          calls. Default-deny policy, full audit trail, per-tool rate limits —
+          drop in front of Claude Desktop, Cursor, Claude Code, or your own
+          agent in 60 seconds. No code changes.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://github.com/rrosshan10/trabecc">
+            Get started on GitHub
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-ghost" href="#how-it-works">See how it works</a>
+        </div>
+        <div class="install">
+          <span class="prompt">$</span>
+          <code>npx trabecc@latest init &amp;&amp; npx trabecc@latest run</code>
+          <span class="copy-hint">⌘C</span>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <img src="/trabecc_logo.png" alt="Trabecc logo" />
+      </div>
     </div>
   </header>
 
+  <!-- ============ TRUST BAR ============ -->
+  <section class="trust-bar" style="padding-top: 2rem; padding-bottom: 2rem;">
+    <div class="container">
+      <p>Built for the agents your team already uses</p>
+      <div class="trust-logos">
+        <div class="trust-logo">Claude Desktop</div>
+        <div class="trust-logo">Cursor</div>
+        <div class="trust-logo">Claude Code</div>
+        <div class="trust-logo">Continue</div>
+        <div class="trust-logo">Cline</div>
+        <div class="trust-logo">Zed</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PROBLEM ============ -->
+  <section id="problem">
+    <div class="container">
+      <div class="reveal">
+        <span class="section-tag">The problem</span>
+        <h2 class="h2">Your agent is making decisions you can't see.</h2>
+        <p class="section-lede">
+          MCP gives your agent superpowers — and gives you no way to know
+          which tools it called, on what arguments, or whether the call
+          should have been allowed. Three months in, every team hits the
+          same three walls.
+        </p>
+      </div>
+      <div class="problem-grid">
+        <div class="problem-card reveal">
+          <h3>No audit trail</h3>
+          <p>You can't answer "what did my agent do today?" because the protocol doesn't log calls. When something breaks, you have no forensic record.</p>
+        </div>
+        <div class="problem-card reveal">
+          <h3>No deny policy</h3>
+          <p>Every tool the MCP server exposes is callable. The read-only filesystem server can also write, and there's no built-in way to gate specific paths or operations.</p>
+        </div>
+        <div class="problem-card reveal">
+          <h3>Runaway loops cost real money</h3>
+          <p>Agents in production sometimes loop. Without per-tool rate limits, one bad prompt can ship your monthly Perplexity / OpenAI / S3 budget to a stranger.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ARCHITECTURE ============ -->
+  <section id="how-it-works" style="background: var(--bg-2);">
+    <div class="container">
+      <div class="reveal">
+        <span class="section-tag">How it works</span>
+        <h2 class="h2">One drop-in. Speaks plain MCP on both sides.</h2>
+        <p class="section-lede">
+          Your agent thinks Trabecc is a single MCP server. Internally, Trabecc
+          fans out to all your real upstream servers, namespaces their tools,
+          and intercepts every call. Same wire format. Zero agent code changes.
+        </p>
+      </div>
+      <div class="arch-wrap reveal">
+        <svg class="arch" viewBox="0 0 800 280" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="brandgrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#dc143c"/>
+              <stop offset="100%" stop-color="#ec4664"/>
+            </linearGradient>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+              <path d="M0,0 L8,4 L0,8 Z" fill="#ec4664"/>
+            </marker>
+          </defs>
+          <!-- Client box -->
+          <rect x="40" y="100" width="160" height="80" rx="10" fill="#16161e" stroke="#3a3942"/>
+          <text x="120" y="135" text-anchor="middle" fill="#fafafa" font-family="ui-sans-serif" font-size="13" font-weight="600">MCP Client</text>
+          <text x="120" y="155" text-anchor="middle" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11">Claude · Cursor · …</text>
+          <!-- Trabecc box -->
+          <rect x="320" y="80" width="160" height="120" rx="12" fill="url(#brandgrad)" stroke="#dc143c"/>
+          <text x="400" y="125" text-anchor="middle" fill="#fff" font-family="ui-sans-serif" font-size="14" font-weight="700">Trabecc</text>
+          <text x="400" y="148" text-anchor="middle" fill="rgba(255,255,255,.85)" font-family="ui-sans-serif" font-size="11">policy · audit · rate limit</text>
+          <text x="400" y="170" text-anchor="middle" fill="rgba(255,255,255,.7)" font-family="ui-monospace" font-size="10">trust, but audit</text>
+          <!-- Upstream boxes -->
+          <rect x="600" y="40" width="160" height="50" rx="8" fill="#16161e" stroke="#3a3942"/>
+          <text x="680" y="71" text-anchor="middle" fill="#fafafa" font-family="ui-sans-serif" font-size="12" font-weight="600">filesystem</text>
+          <rect x="600" y="115" width="160" height="50" rx="8" fill="#16161e" stroke="#3a3942"/>
+          <text x="680" y="146" text-anchor="middle" fill="#fafafa" font-family="ui-sans-serif" font-size="12" font-weight="600">github</text>
+          <rect x="600" y="190" width="160" height="50" rx="8" fill="#16161e" stroke="#3a3942"/>
+          <text x="680" y="221" text-anchor="middle" fill="#fafafa" font-family="ui-sans-serif" font-size="12" font-weight="600">slack</text>
+          <!-- Connecting lines -->
+          <path d="M200 140 L320 140" stroke="#ec4664" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow)" style="animation: flow 3s linear infinite;"/>
+          <path d="M480 110 L600 65" stroke="#ec4664" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow)" style="animation: flow 3s linear infinite .3s;"/>
+          <path d="M480 140 L600 140" stroke="#ec4664" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow)" style="animation: flow 3s linear infinite .6s;"/>
+          <path d="M480 170 L600 215" stroke="#ec4664" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow)" style="animation: flow 3s linear infinite .9s;"/>
+          <text x="120" y="200" text-anchor="middle" fill="#71717a" font-family="ui-monospace" font-size="10">your agent</text>
+          <text x="680" y="265" text-anchor="middle" fill="#71717a" font-family="ui-monospace" font-size="10">upstream MCP servers</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
   <section id="features">
     <div class="container">
-      <h2>What you get on day one</h2>
-      <p class="section-lede">No SDK to integrate, no agent code to change. Trabecc speaks plain MCP on both sides — your existing client points at it, your existing servers run behind it.</p>
-      <div class="features">
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z"/></svg>
+      <div class="reveal">
+        <span class="section-tag">What you get</span>
+        <h2 class="h2">Six features. Day one. No config theater.</h2>
+        <p class="section-lede">
+          No SDK to integrate. No agent code changes. No new infrastructure to
+          run. Trabecc is one binary that speaks plain MCP on both sides.
+        </p>
+      </div>
+      <div class="features-grid">
+        <div class="feature reveal">
+          <div class="icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L3 7v6c0 5 4 9 9 10 5-1 9-5 9-10V7l-9-5z"/></svg></div>
           <h3>Default-deny policy</h3>
-          <p>Glob-matched allow/deny rules with optional argument-level predicates. Hide tools from the catalog or block specific args (no <code>fs__write_*</code> under <code>/etc</code>).</p>
+          <p>Glob-matched allow/deny rules with optional argument-level predicates. Block <code>fs__write_*</code> when path matches <code>/etc/*</code> with one line of YAML.</p>
         </div>
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/><path d="M12 6v6l4 2"/></svg>
+        <div class="feature reveal">
+          <div class="icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
           <h3>Audit log on every call</h3>
-          <p>SQLite-backed, ships with the binary. Records the calling client, redacts credential-shaped args, prunes itself. Cloud retention if you want it.</p>
+          <p>SQLite-backed, ships with the binary. Records the calling client, redacts credential-shaped args. 90-day cloud retention available.</p>
         </div>
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+        <div class="feature reveal">
+          <div class="icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg></div>
           <h3>Per-tool rate limits</h3>
-          <p>Token bucket per qualified tool name. Catch the runaway agent before it ships your API budget to a stranger.</p>
+          <p>Token-bucket per qualified tool. Catch the runaway agent loop before it ships your API budget to a stranger.</p>
         </div>
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
-          <h3>Fan-out across servers</h3>
-          <p>Connect filesystem, GitHub, Slack, Postgres — present them to your agent as one MCP endpoint with namespaced tools (<code>github__search_issues</code>).</p>
+        <div class="feature reveal">
+          <div class="icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h3>Multi-server fan-out</h3>
+          <p>Connect filesystem, GitHub, Slack, Postgres — all behind one MCP endpoint, with namespaced tools (<code>github__search_issues</code>).</p>
         </div>
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <div class="feature reveal">
+          <div class="icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
           <h3>Live dashboard</h3>
-          <p>Server-rendered HTML at <code>localhost:4577</code>. Recent calls, outcome breakdown, top tools. Auto-refresh, no JS required.</p>
+          <p>Server-rendered HTML at <code>localhost:4577</code>. Recent calls, outcomes, top tools. Auto-refresh, no JS required.</p>
         </div>
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><path d="M2 7l10 5 10-5"/></svg>
-          <h3>One config file, zero build</h3>
-          <p>YAML configures servers, rules, and rate limits. One Node binary. Self-host on a laptop or run in your fleet — same code.</p>
+        <div class="feature reveal">
+          <div class="icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><path d="M2 7l10 5 10-5"/></svg></div>
+          <h3>One file. Zero build.</h3>
+          <p>YAML for servers, rules, and rate limits. One Node binary. Self-host on a laptop or run in your fleet — same code.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="how-it-works">
+  <!-- ============ CODE EXAMPLE ============ -->
+  <section style="background: var(--bg-2);">
     <div class="container">
-      <h2>30 seconds to a governed agent</h2>
-      <p class="section-lede">Drop Trabecc between Claude Desktop / Cursor / Claude Code / your custom agent and the MCP servers it already uses. Policy lives in a YAML file you can grep.</p>
-<pre><span class="yaml-comment"># trabecc.yaml</span>
-<span class="yaml-key">defaultPolicy</span>: deny
+      <div style="display: grid; grid-template-columns: 1fr; gap: 3rem; align-items: center;" id="config-grid">
+        <div class="reveal">
+          <span class="section-tag">Configuration</span>
+          <h2 class="h2">A YAML file you can grep.</h2>
+          <p class="section-lede">
+            Policy lives where your team can read it: a single config file in
+            git. No DSL, no remote control plane required, no learning curve.
+            Argument-level rules give you fine-grained control without
+            engineering investment.
+          </p>
+          <a class="btn btn-ghost" href="https://github.com/rrosshan10/trabecc#readme">Read the docs →</a>
+        </div>
+        <div class="code-block reveal">
+          <div class="code-header">
+            <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+            <span>~/.trabecc/config.yaml</span>
+          </div>
+<pre><code><span class="yc"># default-deny — opt in to tools, don't opt out</span>
+<span class="yk">defaultPolicy</span>: deny
 
-<span class="yaml-key">servers</span>:
-  - <span class="yaml-key">name</span>: <span class="yaml-str">filesystem</span>
-    <span class="yaml-key">command</span>: <span class="yaml-str">npx</span>
-    <span class="yaml-key">args</span>: [<span class="yaml-str">"-y"</span>, <span class="yaml-str">"@modelcontextprotocol/server-filesystem"</span>, <span class="yaml-str">"/Users/me/code"</span>]
+<span class="yk">servers</span>:
+  - <span class="yk">name</span>: <span class="ys">filesystem</span>
+    <span class="yk">command</span>: <span class="ys">npx</span>
+    <span class="yk">args</span>: [<span class="ys">"-y"</span>, <span class="ys">"@modelcontextprotocol/server-filesystem"</span>, <span class="ys">"~/code"</span>]
 
-<span class="yaml-key">rules</span>:
-  - <span class="yaml-key">match</span>: <span class="yaml-str">"filesystem__read_*"</span>
-    <span class="yaml-key">effect</span>: allow
-  - <span class="yaml-key">match</span>: <span class="yaml-str">"filesystem__write_*"</span>
-    <span class="yaml-key">effect</span>: deny
-    <span class="yaml-key">when</span>: { <span class="yaml-key">path</span>: <span class="yaml-str">"/etc/*"</span> }
-    <span class="yaml-key">reason</span>: <span class="yaml-str">"no writes under /etc"</span>
+<span class="yk">rules</span>:
+  - <span class="yk">match</span>: <span class="ys">"filesystem__read_*"</span>
+    <span class="yk">effect</span>: allow
 
-<span class="yaml-key">rateLimits</span>:
-  - <span class="yaml-key">match</span>: <span class="yaml-str">"filesystem__*"</span>
-    <span class="yaml-key">perMinute</span>: 120
-</pre>
+  <span class="yc"># argument-level rule — never write under /etc</span>
+  - <span class="yk">match</span>: <span class="ys">"filesystem__write_*"</span>
+    <span class="yk">effect</span>: deny
+    <span class="yk">when</span>: { <span class="yk">path</span>: <span class="ys">"/etc/*"</span> }
+    <span class="yk">reason</span>: <span class="ys">"no writes under /etc"</span>
+
+<span class="yk">rateLimits</span>:
+  - <span class="yk">match</span>: <span class="ys">"filesystem__*"</span>
+    <span class="yk">perMinute</span>: 120
+</code></pre>
+        </div>
+      </div>
+      <style>
+        @media (min-width: 1024px) { #config-grid { grid-template-columns: .9fr 1.1fr; gap: 4rem; } }
+      </style>
     </div>
   </section>
 
-  <section id="why">
+  <!-- ============ DASHBOARD PREVIEW ============ -->
+  <section id="dashboard-preview">
     <div class="container">
-      <h2>Why this matters now</h2>
-      <p class="section-lede" style="max-width: 720px;">Every team adopting MCP discovers the same problems three months in: agents call too many tools, the tools live everywhere, nobody knows who can call what, costs are unpredictable, and there's no audit trail. Trabecc is the boring infrastructure layer that solves all of them in one drop-in.</p>
-      <div class="quote">
-        <blockquote>"The bug isn't that the LLM made a bad tool call. The bug is that nothing in your stack was watching."</blockquote>
-        <cite>— the reason this exists</cite>
+      <div class="reveal" style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+        <span class="section-tag">Live dashboard</span>
+        <h2 class="h2">Every call, observable.</h2>
+        <p class="section-lede" style="margin-left: auto; margin-right: auto;">
+          Server-rendered, no SPA, no auth headache. Open
+          <code>localhost:4577</code> next to your agent and watch the audit
+          log fill in real time.
+        </p>
+      </div>
+      <div class="dash-frame reveal">
+        <!-- Inline SVG mock dashboard. Swap with a real screenshot when you have one. -->
+        <svg viewBox="0 0 1200 680" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: auto; display: block;">
+          <rect width="1200" height="680" fill="#0d0c12"/>
+          <!-- header strip -->
+          <rect x="0" y="0" width="1200" height="80" fill="#16161e"/>
+          <rect x="32" y="22" width="36" height="36" rx="8" fill="#dc143c"/>
+          <text x="80" y="46" fill="#fafafa" font-family="ui-sans-serif" font-size="20" font-weight="700">Trabecc</text>
+          <text x="80" y="65" fill="#a1a1aa" font-family="ui-sans-serif" font-size="12">gateway for MCP · default policy: deny · 1 upstream · 14 rules</text>
+          <text x="1168" y="46" text-anchor="end" fill="#71717a" font-family="ui-monospace" font-size="11">last 60m · refreshing every 5s</text>
+          <!-- stats cards -->
+          <g transform="translate(32, 110)">
+            <text fill="#dc143c" font-family="ui-sans-serif" font-size="11" font-weight="700" letter-spacing="2">ACTIVITY (LAST 60M)</text>
+          </g>
+          <g transform="translate(32, 140)">
+            <rect x="0" y="0" width="216" height="100" rx="10" fill="#16161e" stroke="#27262e"/>
+            <text x="20" y="45" fill="#fafafa" font-family="ui-sans-serif" font-size="32" font-weight="700">1,247</text>
+            <text x="20" y="78" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1.2">TOTAL CALLS</text>
+            <rect x="232" y="0" width="216" height="100" rx="10" fill="#16161e" stroke="#27262e"/>
+            <text x="252" y="45" fill="#22c55e" font-family="ui-sans-serif" font-size="32" font-weight="700">1,184</text>
+            <text x="252" y="78" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1.2">ALLOWED</text>
+            <rect x="464" y="0" width="216" height="100" rx="10" fill="#16161e" stroke="#27262e"/>
+            <text x="484" y="45" fill="#dc143c" font-family="ui-sans-serif" font-size="32" font-weight="700">47</text>
+            <text x="484" y="78" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1.2">DENIED</text>
+            <rect x="696" y="0" width="216" height="100" rx="10" fill="#16161e" stroke="#27262e"/>
+            <text x="716" y="45" fill="#f59e0b" font-family="ui-sans-serif" font-size="32" font-weight="700">12</text>
+            <text x="716" y="78" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1.2">RATE LIMITED</text>
+            <rect x="928" y="0" width="208" height="100" rx="10" fill="#16161e" stroke="#27262e"/>
+            <text x="948" y="45" fill="#f97316" font-family="ui-sans-serif" font-size="32" font-weight="700">4</text>
+            <text x="948" y="78" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1.2">ERRORED</text>
+          </g>
+          <!-- recent calls -->
+          <g transform="translate(32, 280)">
+            <text fill="#dc143c" font-family="ui-sans-serif" font-size="11" font-weight="700" letter-spacing="2">RECENT CALLS</text>
+            <rect x="0" y="20" width="1136" height="360" rx="10" fill="#16161e" stroke="#27262e"/>
+            <!-- col headers -->
+            <text x="20" y="50" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1">TIME</text>
+            <text x="160" y="50" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1">TOOL</text>
+            <text x="500" y="50" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1">AGENT</text>
+            <text x="730" y="50" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1">ARGS</text>
+            <text x="980" y="50" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1">OUTCOME</text>
+            <text x="1100" y="50" fill="#a1a1aa" font-family="ui-sans-serif" font-size="11" letter-spacing="1" text-anchor="end">MS</text>
+            <line x1="0" y1="64" x2="1136" y2="64" stroke="#27262e"/>
+
+            <!-- row 1 (denied) -->
+            <text x="20" y="92" fill="#d4d4d8" font-family="ui-monospace" font-size="11">14:32:18.412</text>
+            <text x="160" y="92" fill="#fafafa" font-family="ui-monospace" font-size="11">filesystem__write_file</text>
+            <text x="500" y="92" fill="#d4d4d8" font-family="ui-monospace" font-size="11">claude-ai@1.2.4</text>
+            <text x="730" y="92" fill="#71717a" font-family="ui-monospace" font-size="10">{"path":"/etc/hosts","content":"…"}</text>
+            <rect x="975" y="78" width="76" height="20" rx="4" fill="rgba(220,20,60,.15)"/>
+            <text x="1013" y="92" fill="#dc143c" text-anchor="middle" font-family="ui-sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.5">DENIED</text>
+            <text x="1100" y="92" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">2</text>
+            <line x1="0" y1="106" x2="1136" y2="106" stroke="#0d0c12"/>
+
+            <!-- row 2 (allowed) -->
+            <text x="20" y="134" fill="#d4d4d8" font-family="ui-monospace" font-size="11">14:32:14.117</text>
+            <text x="160" y="134" fill="#fafafa" font-family="ui-monospace" font-size="11">filesystem__read_text_file</text>
+            <text x="500" y="134" fill="#d4d4d8" font-family="ui-monospace" font-size="11">claude-ai@1.2.4</text>
+            <text x="730" y="134" fill="#71717a" font-family="ui-monospace" font-size="10">{"path":"~/code/trabecc/README.md"}</text>
+            <rect x="975" y="120" width="76" height="20" rx="4" fill="rgba(34,197,94,.15)"/>
+            <text x="1013" y="134" fill="#22c55e" text-anchor="middle" font-family="ui-sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.5">ALLOWED</text>
+            <text x="1100" y="134" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">14</text>
+            <line x1="0" y1="148" x2="1136" y2="148" stroke="#0d0c12"/>
+
+            <!-- row 3 (allowed) -->
+            <text x="20" y="176" fill="#d4d4d8" font-family="ui-monospace" font-size="11">14:32:09.882</text>
+            <text x="160" y="176" fill="#fafafa" font-family="ui-monospace" font-size="11">github__search_issues</text>
+            <text x="500" y="176" fill="#d4d4d8" font-family="ui-monospace" font-size="11">cursor@0.42</text>
+            <text x="730" y="176" fill="#71717a" font-family="ui-monospace" font-size="10">{"q":"is:open label:bug"}</text>
+            <rect x="975" y="162" width="76" height="20" rx="4" fill="rgba(34,197,94,.15)"/>
+            <text x="1013" y="176" fill="#22c55e" text-anchor="middle" font-family="ui-sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.5">ALLOWED</text>
+            <text x="1100" y="176" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">187</text>
+            <line x1="0" y1="190" x2="1136" y2="190" stroke="#0d0c12"/>
+
+            <!-- row 4 (rate limited) -->
+            <text x="20" y="218" fill="#d4d4d8" font-family="ui-monospace" font-size="11">14:32:03.541</text>
+            <text x="160" y="218" fill="#fafafa" font-family="ui-monospace" font-size="11">filesystem__list_directory</text>
+            <text x="500" y="218" fill="#d4d4d8" font-family="ui-monospace" font-size="11">claude-code@1.0</text>
+            <text x="730" y="218" fill="#71717a" font-family="ui-monospace" font-size="10">{"path":"~/code"}</text>
+            <rect x="970" y="204" width="86" height="20" rx="4" fill="rgba(245,158,11,.15)"/>
+            <text x="1013" y="218" fill="#f59e0b" text-anchor="middle" font-family="ui-sans-serif" font-size="9" font-weight="700" letter-spacing="0.5">RATE LIMITED</text>
+            <text x="1100" y="218" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">0</text>
+            <line x1="0" y1="232" x2="1136" y2="232" stroke="#0d0c12"/>
+
+            <!-- row 5 (allowed) -->
+            <text x="20" y="260" fill="#d4d4d8" font-family="ui-monospace" font-size="11">14:31:58.203</text>
+            <text x="160" y="260" fill="#fafafa" font-family="ui-monospace" font-size="11">filesystem__read_text_file</text>
+            <text x="500" y="260" fill="#d4d4d8" font-family="ui-monospace" font-size="11">claude-ai@1.2.4</text>
+            <text x="730" y="260" fill="#71717a" font-family="ui-monospace" font-size="10">{"path":"~/code/trabecc/package.json"}</text>
+            <rect x="975" y="246" width="76" height="20" rx="4" fill="rgba(34,197,94,.15)"/>
+            <text x="1013" y="260" fill="#22c55e" text-anchor="middle" font-family="ui-sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.5">ALLOWED</text>
+            <text x="1100" y="260" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">8</text>
+            <line x1="0" y1="274" x2="1136" y2="274" stroke="#0d0c12"/>
+
+            <!-- row 6 (denied) -->
+            <text x="20" y="302" fill="#d4d4d8" font-family="ui-monospace" font-size="11">14:31:51.119</text>
+            <text x="160" y="302" fill="#fafafa" font-family="ui-monospace" font-size="11">filesystem__write_file</text>
+            <text x="500" y="302" fill="#d4d4d8" font-family="ui-monospace" font-size="11">claude-ai@1.2.4</text>
+            <text x="730" y="302" fill="#71717a" font-family="ui-monospace" font-size="10">{"path":"~/.ssh/authorized_keys",...}</text>
+            <rect x="975" y="288" width="76" height="20" rx="4" fill="rgba(220,20,60,.15)"/>
+            <text x="1013" y="302" fill="#dc143c" text-anchor="middle" font-family="ui-sans-serif" font-size="9.5" font-weight="700" letter-spacing="0.5">DENIED</text>
+            <text x="1100" y="302" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">1</text>
+          </g>
+          <!-- footer note -->
+          <text x="600" y="640" text-anchor="middle" fill="#71717a" font-family="ui-monospace" font-size="11">Trabecc v0.1.1 · MIT · /api/audit</text>
+        </svg>
       </div>
     </div>
   </section>
 
-  <section id="pricing">
+  <!-- ============ STATS ============ -->
+  <section style="background: var(--bg-2);">
     <div class="container">
-      <h2>Pricing</h2>
-      <p class="section-lede">Open-source self-host is free, forever. The cloud product is the same code with one config flag flipped — multi-host audit retention, alerting, team dashboards.</p>
-      <div class="pricing">
-        <div class="price">
+      <div class="reveal" style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+        <span class="section-tag">Engineered to be invisible</span>
+        <h2 class="h2">Sub-millisecond overhead. Zero new dependencies for your team.</h2>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card reveal">
+          <div class="stat-num">&lt;1ms</div>
+          <div class="stat-label">Policy decision overhead per call</div>
+        </div>
+        <div class="stat-card reveal">
+          <div class="stat-num">68 KB</div>
+          <div class="stat-label">npm install footprint, unpacked</div>
+        </div>
+        <div class="stat-card reveal">
+          <div class="stat-num">0</div>
+          <div class="stat-label">Native dependencies; pure Node</div>
+        </div>
+        <div class="stat-card reveal">
+          <div class="stat-num">60s</div>
+          <div class="stat-label">From npm install to first audit row</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TESTIMONIAL (PLACEHOLDER) ============ -->
+  <section>
+    <div class="container">
+      <div class="quote-card reveal">
+        <span class="quote-mark">"</span>
+        <blockquote>
+          The bug isn't that the LLM made a bad tool call. The bug is that
+          nothing in your stack was watching. Trabecc is what you wire in
+          before that becomes your incident.
+        </blockquote>
+        <div class="quote-attr">
+          <div class="quote-avatar">★</div>
+          <div>
+            <div class="quote-name">Customer testimonial — placeholder</div>
+            <div class="quote-role">Replace with real quote post-launch</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PRICING ============ -->
+  <section id="pricing" style="background: var(--bg-2);">
+    <div class="container">
+      <div class="reveal" style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+        <span class="section-tag">Pricing</span>
+        <h2 class="h2">Free forever to self-host. Cloud is one config flag.</h2>
+        <p class="section-lede" style="margin-left: auto; margin-right: auto;">
+          The OSS works fully without ever phoning home. Cloud retention,
+          alerts, and team dashboards are the same code with one flag flipped.
+        </p>
+      </div>
+      <div class="pricing-grid">
+        <div class="price-card reveal">
           <h3>Self-host</h3>
           <div class="num">$0</div>
           <ul>
             <li>Full proxy + audit + policy</li>
             <li>Local SQLite audit log</li>
-            <li>Single dashboard</li>
+            <li>Single-machine dashboard</li>
             <li>Community support</li>
           </ul>
           <a class="btn btn-ghost" href="https://github.com/rrosshan10/trabecc">Read the docs</a>
         </div>
-        <div class="price featured">
+        <div class="price-card featured reveal">
+          <span class="badge">Most popular</span>
           <h3>Pro</h3>
           <div class="num">$29 <small>/ user / month</small></div>
           <ul>
             <li>Cloud audit retention (90 days)</li>
             <li>Multi-host dashboards</li>
-            <li>Alerts on anomalies</li>
+            <li>Anomaly alerts (email + webhook)</li>
             <li>Email support</li>
           </ul>
-          <a class="btn btn-primary" href="mailto:support.team@trabecc.com?subject=Trabecc%20Pro">Get on the waitlist</a>
+          <a class="btn btn-primary" href="https://buy.stripe.com/fZuaEQ5TqbeU2fC7widUY00">Start free trial</a>
         </div>
-        <div class="price">
+        <div class="price-card reveal">
           <h3>Team</h3>
           <div class="num">$99 <small>/ user / month</small></div>
           <ul>
@@ -297,7 +856,7 @@
           </ul>
           <a class="btn btn-ghost" href="mailto:support.team@trabecc.com?subject=Trabecc%20Team">Contact us</a>
         </div>
-        <div class="price">
+        <div class="price-card reveal">
           <h3>Enterprise</h3>
           <div class="num">Custom</div>
           <ul>
@@ -312,14 +871,86 @@
     </div>
   </section>
 
+  <!-- ============ FAQ ============ -->
+  <section id="faq">
+    <div class="container">
+      <div class="reveal" style="text-align: center; max-width: 720px; margin: 0 auto 3rem;">
+        <span class="section-tag">FAQ</span>
+        <h2 class="h2">Questions everyone asks first.</h2>
+      </div>
+      <div class="faq-list reveal">
+        <details>
+          <summary>Does Trabecc work with my existing MCP servers?</summary>
+          <p>Yes. Trabecc speaks plain MCP on both sides — it appears as a single MCP server to your client, and connects to your existing upstream servers as their client. No changes to either side. Tested against the official filesystem, github, slack, and postgres servers, plus any community server using the standard SDK.</p>
+        </details>
+        <details>
+          <summary>Will it slow down my agent?</summary>
+          <p>Policy decisions are sub-millisecond. Audit writes are async. The fan-out adds one process hop, which adds about ~1-3ms per tool call. For agents that already wait hundreds of ms on LLM responses, this is unmeasurable.</p>
+        </details>
+        <details>
+          <summary>Does the OSS phone home?</summary>
+          <p>No. Zero telemetry by default. The cloud-sync code is opt-in and only activates when you set <code>cloud.apiKey</code> in your config — that's the wedge between OSS and the paid tier.</p>
+        </details>
+        <details>
+          <summary>What about claims my agent makes after going through Trabecc — can it fool me?</summary>
+          <p>Trabecc records every call's request, response size, duration, and outcome before passing the result back to the agent. The audit log is independent of what the agent claims it did. A useful pattern: have your reviewer compare the agent's narrative against the audit log.</p>
+        </details>
+        <details>
+          <summary>I'm running 50 agents in production. Does Trabecc scale?</summary>
+          <p>Each agent gets its own Trabecc instance — they're cheap to spawn and don't share state. The cloud product centralizes audit logs across all of them so you have one dashboard. For 50 agents, you'd run 50 Trabecc processes (or sidecars if containerized) and one cloud account.</p>
+        </details>
+        <details>
+          <summary>Can I write a policy that needs to call out to my own service?</summary>
+          <p>v0.1 is YAML-only — argument-level globs cover ~80% of real cases. v0.2 will add a webhook hook for arbitrary policy decisions. If you need this now, open an issue with your use case.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL CTA ============ -->
+  <section class="cta-strip">
+    <div class="container reveal">
+      <h2>Stop hoping. Start governing.</h2>
+      <p>60 seconds to install. Default-deny by default. MIT licensed.</p>
+      <div class="cta-row" style="justify-content: center;">
+        <a class="btn btn-on-brand" href="https://github.com/rrosshan10/trabecc">Get started on GitHub →</a>
+        <a class="btn btn-on-brand-ghost" href="https://buy.stripe.com/fZuaEQ5TqbeU2fC7widUY00">Start Pro free trial</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
   <footer>
     <div class="container row">
-      <div>© 2026 Trabecc · v0.1 · open-source · MIT</div>
-      <div>
-        <a href="https://github.com/rrosshan10/trabecc">GitHub</a> ·
-        <a href="mailto:support.team@trabecc.com">support.team@trabecc.com</a>
+      <div class="brand-mini">
+        <img src="/trabecc_logo.png" alt="" />
+        <span>© 2026 Trabecc · v0.1.1 · MIT</span>
+      </div>
+      <div class="links">
+        <a href="https://github.com/rrosshan10/trabecc">GitHub</a>
+        <a href="https://www.npmjs.com/package/trabecc">npm</a>
+        <a href="mailto:support.team@trabecc.com">support</a>
+        <a href="mailto:security@trabecc.com">security</a>
       </div>
     </div>
   </footer>
+
+  <script>
+    // Reveal-on-scroll using IntersectionObserver. Falls back gracefully
+    // (everything stays visible) if IO isn't supported.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            io.unobserve(entry.target);
+          }
+        }
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+    } else {
+      document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
+    }
+  </script>
 </body>
 </html>

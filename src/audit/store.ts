@@ -168,6 +168,96 @@ export class AuditStore {
     return { total, byOutcome, topTools };
   }
 
+  /**
+   * Time-series of call counts by outcome, bucketed by `bucketMs`. Used to
+   * render the activity-over-time chart on the dashboard. Returns at least
+   * `nBuckets` rows even when the DB is empty so the chart renders an
+   * empty axis instead of nothing.
+   */
+  timeSeriesByOutcome(
+    sinceMs: number,
+    bucketMs: number,
+    nowMs: number = Date.now(),
+  ): Array<{ bucketStart: number; allowed: number; denied: number; rate_limited: number; error: number }> {
+    const nBuckets = Math.max(1, Math.ceil((nowMs - sinceMs) / bucketMs));
+    const series = Array.from({ length: nBuckets }, (_, i) => ({
+      bucketStart: sinceMs + i * bucketMs,
+      allowed: 0,
+      denied: 0,
+      rate_limited: 0,
+      error: 0,
+    }));
+
+    const rows = this.db
+      .prepare(
+        `SELECT
+           CAST((ts - ?) / ? AS INTEGER) AS bucket,
+           outcome,
+           COUNT(*) AS c
+         FROM audit_log
+         WHERE ts >= ?
+         GROUP BY bucket, outcome`,
+      )
+      .all(sinceMs, bucketMs, sinceMs) as Array<{
+      bucket: number;
+      outcome: AuditRecord["outcome"];
+      c: number;
+    }>;
+
+    for (const r of rows) {
+      const idx = Math.min(r.bucket, nBuckets - 1);
+      if (idx < 0) continue;
+      series[idx]![r.outcome] = r.c;
+    }
+    return series;
+  }
+
+  /**
+   * Latency histogram. `bucketsMs` defines bucket upper bounds, e.g.
+   * [1, 10, 100, 1000] yields four buckets (0-1ms, 1-10ms, 10-100ms,
+   * 100-1000ms) plus an overflow bucket (>=1000ms).
+   */
+  latencyHistogram(
+    sinceMs: number,
+    bucketsMs: number[],
+  ): Array<{ minMs: number; maxMs: number | null; count: number }> {
+    const histogram: Array<{ minMs: number; maxMs: number | null; count: number }> = [];
+    let prev = 0;
+    for (const upper of bucketsMs) {
+      histogram.push({ minMs: prev, maxMs: upper, count: 0 });
+      prev = upper;
+    }
+    histogram.push({ minMs: prev, maxMs: null, count: 0 });
+
+    const rows = this.db
+      .prepare(
+        `SELECT duration_ms AS d FROM audit_log
+         WHERE ts >= ? AND duration_ms IS NOT NULL`,
+      )
+      .all(sinceMs) as Array<{ d: number }>;
+    for (const r of rows) {
+      const idx = histogram.findIndex(
+        (b) => r.d >= b.minMs && (b.maxMs === null || r.d < b.maxMs),
+      );
+      if (idx >= 0) histogram[idx]!.count++;
+    }
+    return histogram;
+  }
+
+  /** p50 / p95 / p99 of duration_ms over the window. Returns 0s for an empty window. */
+  latencyPercentiles(sinceMs: number): { p50: number; p95: number; p99: number; count: number } {
+    const rows = this.db
+      .prepare(
+        `SELECT duration_ms AS d FROM audit_log
+         WHERE ts >= ? AND duration_ms IS NOT NULL
+         ORDER BY duration_ms ASC`,
+      )
+      .all(sinceMs) as Array<{ d: number }>;
+    if (rows.length === 0) return { p50: 0, p95: 0, p99: 0, count: 0 };
+    const at = (q: number) => rows[Math.min(rows.length - 1, Math.floor(rows.length * q))]!.d;
+    return { p50: at(0.5), p95: at(0.95), p99: at(0.99), count: rows.length };
+  }
+
   close(): void {
     this.db.close();
   }

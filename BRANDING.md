@@ -41,10 +41,10 @@ Don't use any of these in marketing — they were considered and rejected:
 
 ### Symbol
 
-A stylized **I-beam profile** in the brand accent color. Latin *trabes* = beam; the I-beam is the canonical structural element in engineering. The symbol scales from 16×16 favicon to 256×256 avatar without losing legibility.
+A **crimson shield with stylized 'T' and circuit-trace lines** — security/governance metaphor on the left, control-plane / data-flow metaphor on the right, joined into one mark. The shield is the visual that survives the eye's first 200ms, before any reading happens.
 
-Source: [brand/logo-symbol.svg](brand/logo-symbol.svg)
-Raster fallbacks: [brand/icon-256.png](brand/icon-256.png), [brand/favicon-32.png](brand/favicon-32.png)
+Source of truth: [brand/trabecc_logo.png](brand/trabecc_logo.png) (630×624 PNG)
+Scaled raster: [brand/icon-512.png](brand/icon-512.png) · [brand/icon-256.png](brand/icon-256.png) · [brand/favicon-32.png](brand/favicon-32.png)
 
 ### Wordmark
 
@@ -71,15 +71,31 @@ Symbol + lowercase "trabecc" in system sans (`ui-sans-serif`, font-weight 700, l
 
 | Token | Hex | Used for |
 | --- | --- | --- |
-| `bg` | `#0b0d10` | Page background |
-| `surface` | `#11151a` | Cards, code blocks, the symbol container |
-| `border` | `#1f2937` | Card borders, dividers |
-| `fg` | `#e5e7eb` | Primary text |
-| `fg-dim` | `#9ca3af` | Secondary text, captions |
-| `accent` | `#93c5fd` | The brand color. Buttons, the I-beam, links, accents |
-| `success` | `#34d399` | "Allowed" outcomes, install command prompt, positive signals |
-| `warning` | `#fbbf24` | "Rate limited" outcomes |
-| `error` | `#f87171` | "Denied" / "Errored" outcomes |
+| `bg` | `#0a0a0c` | Page background — warmer than pure black to match the logo's dark contrast |
+| `bg-2` | `#131218` | Section alternation background |
+| `bg-3` | `#1a1922` | Subtle inset surfaces (chart backgrounds, code rows) |
+| `surface` | `#16161e` | Cards, code blocks, dashboard chart cards |
+| `border` | `#27262e` | Card borders, dividers |
+| `border-strong` | `#3a3942` | Hovered card borders, emphasized dividers |
+| `fg` | `#fafafa` | Primary text |
+| `fg-2` | `#d4d4d8` | Body / secondary surfaces |
+| `fg-dim` | `#a1a1aa` | Captions, metadata |
+| `fg-faint` | `#71717a` | Axes, tooltips, tertiary detail |
+| **`brand`** | **`#dc143c`** | **Crimson — primary brand. CTAs, the logo, "denied" outcome.** |
+| **`brand-dark`** | **`#9f0d2c`** | Hover/active state for primary buttons |
+| `brand-glow` | `rgba(220, 20, 60, .18)` | Box-shadow glows, subtle accents |
+| `brand-soft` | `rgba(220, 20, 60, .08)` | Pill backgrounds, subtle highlights |
+| `success` | `#22c55e` | "Allowed" outcome — green for safe / passed |
+| `warning` | `#f59e0b` | "Rate limited" outcome |
+| `error` | `#f97316` | "Errored" outcome (orange — distinct from brand red) |
+
+### Brand color rationale
+
+The brand color is **crimson red** (`#dc143c`) — extracted from the logo, which uses a deep red shield. This is uncommon in the SaaS infra space (most pick blue/indigo), which makes Trabecc instantly distinctive in a crowded ecosystem.
+
+Important semantic note: the **denied audit outcome** uses the same crimson as the brand. This is intentional — denial is the product's heroic action. When you see crimson on the dashboard, it's Trabecc doing its job.
+
+Errors use **orange** (`#f97316`) instead of red so they remain visually distinct from "denied" rows. Don't conflate them — denial is policy working as designed; an error is something to investigate.
 
 ### Color usage rules
 

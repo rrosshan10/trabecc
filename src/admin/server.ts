@@ -31,7 +31,23 @@ export function startAdminServer(cfg: Config): { stop: () => Promise<void> } {
 
   const app = new Hono();
 
-  app.get("/api/health", (c) => c.json({ ok: true, version: "0.1.0" }));
+  app.get("/api/health", (c) => c.json({ ok: true, version: "0.1.1" }));
+
+  app.get("/api/timeseries", (c) => {
+    const windowMinutes = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));
+    const sinceMs = Date.now() - windowMinutes * 60_000;
+    const bucketMs = pickBucketMs(windowMinutes);
+    return c.json({ bucketMs, series: audit.timeSeriesByOutcome(sinceMs, bucketMs) });
+  });
+
+  app.get("/api/latency", (c) => {
+    const windowMinutes = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));
+    const sinceMs = Date.now() - windowMinutes * 60_000;
+    return c.json({
+      percentiles: audit.latencyPercentiles(sinceMs),
+      histogram: audit.latencyHistogram(sinceMs, [1, 10, 100, 1000]),
+    });
+  });
 
   app.get("/api/config", (c) => {
     return c.json({
@@ -71,11 +87,15 @@ export function startAdminServer(cfg: Config): { stop: () => Promise<void> } {
     const limit = Math.min(500, Number(c.req.query("limit") ?? 50));
     const refreshSeconds = Math.max(2, Number(c.req.query("refresh") ?? 5));
     const sinceMs = Date.now() - windowMinutes * 60_000;
+    const bucketMs = pickBucketMs(windowMinutes);
     return c.html(
       renderDashboard({
         config: cfg,
         records: audit.recent(limit, 0),
         stats: audit.stats(sinceMs),
+        timeSeries: audit.timeSeriesByOutcome(sinceMs, bucketMs),
+        latencyHistogram: audit.latencyHistogram(sinceMs, [1, 10, 100, 1000]),
+        latency: audit.latencyPercentiles(sinceMs),
         windowMinutes,
         refreshSeconds,
       }),
@@ -97,4 +117,21 @@ export function startAdminServer(cfg: Config): { stop: () => Promise<void> } {
       audit.close();
     },
   };
+}
+
+/**
+ * Pick a sensible time-series bucket size for the requested window. Targets
+ * ~60 buckets in the chart so it always reads as a continuous trend.
+ *   ≤1h   →  1-minute buckets
+ *   ≤6h   →  6-minute buckets
+ *   ≤24h  →  15-minute buckets
+ *   ≤7d   →  1-hour buckets
+ *   else  →  6-hour buckets
+ */
+function pickBucketMs(windowMinutes: number): number {
+  if (windowMinutes <= 60) return 60_000;
+  if (windowMinutes <= 360) return 6 * 60_000;
+  if (windowMinutes <= 1440) return 15 * 60_000;
+  if (windowMinutes <= 10080) return 60 * 60_000;
+  return 6 * 60 * 60_000;
 }

@@ -1,28 +1,23 @@
 <!--
-  Trabecc social preview card. 1200x630 — the standard for Open Graph
-  (Twitter / Facebook / LinkedIn / Slack / Discord all support this size).
-  Reads as: name, tagline, descriptive H1. Same dark theme as the landing
-  page so the visual transition feels continuous.
-
-  Tools that ingest the og:image:
-    - Twitter: cropped to 2:1 — fine, our content is centered
-    - LinkedIn: shows full
-    - Slack/Discord/Telegram: shows full
-    - HN: doesn't render images, so this is bonus territory
+  Trabecc social preview card. 1200x630.
+  Crimson brand + actual logo embedded.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
-  <!-- Background -->
   <defs>
-    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#1a2638" stop-opacity="0.8"/>
-      <stop offset="100%" stop-color="#0b0d10" stop-opacity="0"/>
+    <radialGradient id="glow" cx="20%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#dc143c" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0a0a0c" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="brandgrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#dc143c"/>
+      <stop offset="100%" stop-color="#ec4664"/>
+    </linearGradient>
   </defs>
-  <rect width="1200" height="630" fill="#0b0d10"/>
+  <rect width="1200" height="630" fill="#0a0a0c"/>
   <rect width="1200" height="630" fill="url(#glow)"/>
 
-  <!-- subtle grid pattern -->
-  <g opacity="0.06" stroke="#93c5fd" stroke-width="1">
+  <!-- subtle grid -->
+  <g opacity="0.04" stroke="#ffffff" stroke-width="1">
     <line x1="0" y1="158" x2="1200" y2="158"/>
     <line x1="0" y1="316" x2="1200" y2="316"/>
     <line x1="0" y1="474" x2="1200" y2="474"/>
@@ -32,40 +27,41 @@
     <line x1="960" y1="0" x2="960" y2="630"/>
   </g>
 
-  <!-- Symbol (large, top-left) -->
-  <g transform="translate(80, 80)">
-    <rect width="96" height="96" rx="22" fill="#11151a"/>
-    <rect x="18" y="21" width="60" height="11" rx="3" fill="#93c5fd"/>
-    <rect x="42.75" y="21" width="10.5" height="54" rx="2.5" fill="#93c5fd"/>
-    <rect x="30" y="69" width="36" height="7.5" rx="2.25" fill="#93c5fd" opacity="0.65"/>
+  <!-- Logo on the right, glowing -->
+  <g transform="translate(820, 100)">
+    <circle cx="160" cy="220" r="190" fill="#dc143c" opacity="0.18" filter="blur(20px)"/>
+    <image href="trabecc_logo.png" x="0" y="60" width="320" height="320"/>
   </g>
 
-  <!-- Wordmark (top-left, beside symbol) -->
-  <text x="200" y="148"
-        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
-        font-size="56" font-weight="700" letter-spacing="-0.025em" fill="#ffffff">trabecc</text>
-
-  <!-- Tagline pill -->
-  <g transform="translate(80, 240)">
-    <rect width="240" height="40" rx="20" fill="#93c5fd" fill-opacity="0.10" stroke="#93c5fd" stroke-opacity="0.25"/>
-    <text x="22" y="26"
+  <!-- Pill -->
+  <g transform="translate(80, 100)">
+    <rect width="280" height="44" rx="22" fill="#dc143c" fill-opacity="0.10" stroke="#dc143c" stroke-opacity="0.35"/>
+    <circle cx="22" cy="22" r="4" fill="#dc143c"/>
+    <text x="38" y="29"
           font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
-          font-size="15" font-weight="600" letter-spacing="0.04em" fill="#93c5fd">v0.1 · open-source · MIT</text>
+          font-size="15" font-weight="600" letter-spacing="0.04em" fill="#ec4664">v0.1.1 · open-source · MIT</text>
   </g>
 
-  <!-- Hero headline -->
-  <text x="80" y="370"
+  <!-- Wordmark -->
+  <text x="80" y="220"
         font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
-        font-size="76" font-weight="700" letter-spacing="-0.025em" fill="#ffffff">The gateway for every</text>
-  <text x="80" y="450"
-        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
-        font-size="76" font-weight="700" letter-spacing="-0.025em" fill="#ffffff">AI tool call.</text>
+        font-size="72" font-weight="800" letter-spacing="-0.03em" fill="#ffffff">Trabecc</text>
 
-  <!-- Footer slogan -->
-  <text x="80" y="540"
+  <!-- Headline (two lines) -->
+  <text x="80" y="320"
         font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
-        font-size="24" font-weight="500" fill="#9ca3af">Trust, but audit.</text>
-  <text x="80" y="572"
+        font-size="56" font-weight="700" letter-spacing="-0.025em" fill="#fafafa">Trust, but <tspan fill="url(#brandgrad)">audit</tspan> —</text>
+  <text x="80" y="385"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="56" font-weight="700" letter-spacing="-0.025em" fill="#fafafa">every AI tool call.</text>
+
+  <!-- Sub-line -->
+  <text x="80" y="455"
+        font-family="ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="24" font-weight="500" fill="#a1a1aa">Default-deny policy · audit log · rate limits — for MCP.</text>
+
+  <!-- URL footer -->
+  <text x="80" y="555"
         font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
-        font-size="20" font-weight="400" fill="#34d399">trabecc.com</text>
+        font-size="22" font-weight="500" fill="#22c55e">→ trabecc.com</text>
 </svg>
