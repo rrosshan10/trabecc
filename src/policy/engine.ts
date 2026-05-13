@@ -1,11 +1,22 @@
 // Policy evaluation. Rules are checked top-to-bottom; first match wins.
 // If nothing matches, the configured defaultPolicy is applied.
 //
-// Match syntax is a tiny glob (just `*` and `?`), deliberately restricted —
-// regex would be more powerful but harder for a non-engineer reviewer to
-// audit, and policy files exist to be auditable.
+// `when` clauses gate by argument values. Each clause key is an argument
+// name; the value is either:
+//   * a string  → glob match against the argument's stringified value
+//   * an object → operator-style matcher with one of:
+//       glob:        glob match (same as the string form)
+//       contains:    case-insensitive substring search
+//       containsAny: array of substrings; any match counts
+//       notContains: case-insensitive substring; rule applies only if absent
+//       matches:     JS regex source string, evaluated case-insensitive
+//
+// The object form unlocks content-safety policies — block tools whose
+// `prompt` argument contains a banned keyword, or whose `content` doesn't
+// contain a required compliance string, etc. The string form is kept for
+// backward compatibility with existing YAML.
 
-import type { Rule } from "../config.ts";
+import type { Rule, WhenClause } from "../config.ts";
 
 export type Decision = {
   effect: "allow" | "deny";
@@ -26,11 +37,76 @@ export function compileGlob(glob: string): RegExp {
   return new RegExp(out);
 }
 
+type CompiledMatcher = {
+  key: string;
+  test: (value: unknown) => boolean;
+};
+
 type CompiledRule = {
   rule: Rule;
   re: RegExp;
-  whenChecks: Array<{ key: string; re: RegExp }>;
+  whenChecks: CompiledMatcher[];
 };
+
+/** Stringify any argument value so substring/regex/glob matchers can run. */
+function valueAsString(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v === null || v === undefined) return "";
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+/** Compile a single `when` clause into a fast value tester. */
+function compileWhenClause(clause: WhenClause): (value: unknown) => boolean {
+  if (typeof clause === "string") {
+    const re = compileGlob(clause);
+    return (v) => re.test(valueAsString(v));
+  }
+
+  const tests: Array<(s: string) => boolean> = [];
+
+  if (clause.glob !== undefined) {
+    const re = compileGlob(clause.glob);
+    tests.push((s) => re.test(s));
+  }
+  if (clause.contains !== undefined) {
+    const needle = clause.contains.toLowerCase();
+    tests.push((s) => s.toLowerCase().includes(needle));
+  }
+  if (clause.containsAny !== undefined && clause.containsAny.length > 0) {
+    const needles = clause.containsAny.map((n) => n.toLowerCase());
+    tests.push((s) => {
+      const lower = s.toLowerCase();
+      return needles.some((n) => lower.includes(n));
+    });
+  }
+  if (clause.notContains !== undefined) {
+    const needle = clause.notContains.toLowerCase();
+    tests.push((s) => !s.toLowerCase().includes(needle));
+  }
+  if (clause.matches !== undefined) {
+    let re: RegExp | null = null;
+    try {
+      re = new RegExp(clause.matches, "i");
+    } catch {
+      // invalid regex — clause never matches (fail-closed)
+      return () => false;
+    }
+    const compiled = re;
+    tests.push((s) => compiled.test(s));
+  }
+
+  // No operators set → clause never matches anything (defensive default).
+  if (tests.length === 0) return () => false;
+
+  return (v) => {
+    const s = valueAsString(v);
+    return tests.every((t) => t(s));
+  };
+}
 
 export class PolicyEngine {
   private compiled: CompiledRule[];
@@ -42,7 +118,10 @@ export class PolicyEngine {
       rule,
       re: compileGlob(rule.match),
       whenChecks: rule.when
-        ? Object.entries(rule.when).map(([key, glob]) => ({ key, re: compileGlob(glob) }))
+        ? Object.entries(rule.when).map(([key, clause]) => ({
+            key,
+            test: compileWhenClause(clause),
+          }))
         : [],
     }));
   }
@@ -61,10 +140,7 @@ export class PolicyEngine {
 
       if (whenChecks.length > 0) {
         if (!args) continue; // list-time: skip argument-conditional rules
-        const allMatch = whenChecks.every(({ key, re: argRe }) => {
-          const v = args[key];
-          return typeof v === "string" && argRe.test(v);
-        });
+        const allMatch = whenChecks.every(({ key, test }) => test(args[key]));
         if (!allMatch) continue;
       }
 

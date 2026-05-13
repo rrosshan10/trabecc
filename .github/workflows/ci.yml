@@ -38,7 +38,8 @@ jobs:
             tests/ratelimit.test.ts \
             tests/redact.test.ts \
             tests/cloud_sync.test.ts \
-            tests/audit_store.test.ts
+            tests/audit_store.test.ts \
+            tests/cloud_policy_pull.test.ts
 
       - name: E2E smoke
         run: node tests/e2e.smoke.ts

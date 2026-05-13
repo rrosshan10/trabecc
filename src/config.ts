@@ -19,6 +19,27 @@ const ServerSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+/**
+ * A single `when` clause value. Two forms are accepted:
+ *   * string  → treated as a glob over the argument's stringified value
+ *               (e.g. `path: "/etc/*"`)
+ *   * object  → operator-style matcher with one or more of:
+ *               { glob, contains, containsAny, notContains, matches }
+ *
+ * The object form unlocks content-safety policies (e.g. block tools whose
+ * `prompt` argument contains a banned keyword). The string form is kept
+ * for backward compatibility with existing YAML.
+ */
+const WhenClauseObjectSchema = z.object({
+  glob: z.string().optional(),
+  contains: z.string().optional(),
+  containsAny: z.array(z.string()).optional(),
+  notContains: z.string().optional(),
+  matches: z.string().optional(),
+});
+const WhenClauseSchema = z.union([z.string(), WhenClauseObjectSchema]);
+export type WhenClause = z.infer<typeof WhenClauseSchema>;
+
 const RuleSchema = z.object({
   /** Glob over qualified tool name, e.g. "github__*" or "fs__write_*" */
   match: z.string().min(1),
@@ -27,12 +48,12 @@ const RuleSchema = z.object({
   reason: z.string().optional(),
   /**
    * Optional argument predicates. Keys are top-level argument names; values
-   * are globs matched against the stringified argument value. ALL listed
-   * keys must match for the rule to apply. Rules with a `when` clause are
-   * skipped during catalog (tools/list) evaluation since args aren't known
+   * are either globs (string) or operator objects. ALL listed keys must
+   * match for the rule to apply. Rules with a `when` clause are skipped
+   * during catalog (tools/list) evaluation since args aren't known
    * there — they only affect actual tools/call decisions.
    */
-  when: z.record(z.string(), z.string()).optional(),
+  when: z.record(z.string(), WhenClauseSchema).optional(),
 });
 
 const RateLimitSchema = z.object({
@@ -93,6 +114,24 @@ const ConfigSchema = z.object({
       dropOnOverflow: z.boolean().default(true),
       /** Max buffer size before drop/backpressure kicks in. */
       maxBuffer: z.number().int().positive().default(10_000),
+
+      /**
+       * If true, periodically GET <policiesEndpoint> with the same apiKey
+       * and merge the returned rules into the in-memory PolicyEngine.
+       * Cloud rules take precedence over local YAML rules (first match
+       * wins, cloud rules are evaluated first). Requires apiKey to be set.
+       */
+      pullPolicies: z.boolean().default(false),
+
+      /**
+       * Where the gateway fetches cloud policies from. By default we derive
+       * this from `endpoint` (replacing `/v1/ingest` with `/v1/policies`).
+       * Override only when you self-host a different control plane.
+       */
+      policiesEndpoint: z.string().url().optional(),
+
+      /** How often to refetch cloud policies. Defaults to 60s. */
+      policyPullIntervalMs: z.number().int().positive().default(60_000),
     })
     .default({}),
 });

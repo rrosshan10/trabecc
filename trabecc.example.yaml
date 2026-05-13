@@ -57,3 +57,23 @@ rateLimits:
   - match: "filesystem__*"
     perMinute: 120
     burst: 30
+
+# Optional: Trabecc Cloud integration.
+#
+# Two independent capabilities — either can run alone or together. Both
+# default to off; both require `cloud.apiKey` to be set.
+#
+#   1. PUSH audit events to the cloud for multi-host retention + alerts.
+#   2. PULL policies from the cloud UI so a non-engineer can manage
+#      what your agent can call — content keyword blocks, tool blocks,
+#      argument-value gates. Cloud policies are evaluated FIRST (so they
+#      take precedence over your local rules above).
+#
+# cloud:
+#   enabled: true                               # push audit events
+#   apiKey: tk_live_…
+#   endpoint: https://api.trabecc.com/v1/ingest
+#   pullPolicies: true                          # pull policies from cloud
+#   policyPullIntervalMs: 60000                 # refresh interval (default 60s)
+#   # policiesEndpoint: <auto-derived from endpoint by default>
+

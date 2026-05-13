@@ -16,10 +16,15 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 
-import type { Config } from "../config.ts";
+import type { Config, Rule } from "../config.ts";
 import { Upstream } from "./upstream.ts";
 import { qualify, unqualify } from "./namespace.ts";
 import { PolicyEngine } from "../policy/engine.ts";
+import {
+  CloudPolicyPuller,
+  derivePoliciesEndpoint,
+  mergePolicies,
+} from "../policy/cloud-pull.ts";
 import { RateLimiter } from "../ratelimit/bucket.ts";
 import { AuditStore } from "../audit/store.ts";
 import { buildRedactor } from "../audit/redact.ts";
@@ -37,6 +42,9 @@ export class McpGateway {
   private limiter: RateLimiter;
   private audit: AuditStore;
   private cloud: CloudSync | null = null;
+  private policyPuller: CloudPolicyPuller | null = null;
+  /** Most recent set of rules fetched from the cloud; merged with YAML on rebuild. */
+  private cloudRules: Rule[] = [];
   private pruneTimer: NodeJS.Timeout | null = null;
   private readonly cfg: Config;
   private readonly redact: (value: unknown) => unknown;
@@ -57,6 +65,16 @@ export class McpGateway {
         batchSize: cfg.cloud.batchSize,
         dropOnOverflow: cfg.cloud.dropOnOverflow,
         maxBuffer: cfg.cloud.maxBuffer,
+      });
+    }
+    if (cfg.cloud.pullPolicies && cfg.cloud.apiKey) {
+      const policiesEndpoint =
+        cfg.cloud.policiesEndpoint ?? derivePoliciesEndpoint(cfg.cloud.endpoint);
+      this.policyPuller = new CloudPolicyPuller({
+        endpoint: policiesEndpoint,
+        apiKey: cfg.cloud.apiKey,
+        intervalMs: cfg.cloud.policyPullIntervalMs,
+        onChange: (cloudRules) => this.onCloudPolicyChange(cloudRules),
       });
     }
 
@@ -92,6 +110,10 @@ export class McpGateway {
     this.pruneTimer.unref();
 
     this.cloud?.start();
+    // The puller fires its first fetch synchronously inside start(); we
+    // don't await it because the gateway must be reachable on stdio first
+    // so MCP clients don't time out waiting for connect().
+    void this.policyPuller?.start();
 
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
@@ -103,9 +125,41 @@ export class McpGateway {
   async stop(): Promise<void> {
     if (this.pruneTimer) clearInterval(this.pruneTimer);
     await this.cloud?.stop();
+    await this.policyPuller?.stop();
     await Promise.all([...this.upstreams.values()].map((u) => u.close()));
     await this.server.close();
     this.audit.close();
+  }
+
+  /**
+   * Cloud puller callback. Stores the new cloud rule set, rebuilds the
+   * PolicyEngine with cloud-first precedence over YAML, then notifies any
+   * connected MCP client that the tool catalog may have changed (newly
+   * denied tools disappear from /tools/list).
+   *
+   * The MCP spec exposes notifications/tools/list_changed for exactly this
+   * — clients that honor it refresh their cached tool list automatically.
+   * Clients that ignore it just see the new policy on their next
+   * tools/list call, which is fine.
+   */
+  private onCloudPolicyChange(cloudRules: Rule[]): void {
+    this.cloudRules = cloudRules;
+    const merged = mergePolicies(cloudRules, this.cfg.rules);
+    this.policy = new PolicyEngine(merged, this.cfg.defaultPolicy);
+    log.info("policy engine rebuilt", {
+      cloudRules: cloudRules.length,
+      yamlRules: this.cfg.rules.length,
+      total: merged.length,
+    });
+    // Best-effort notification. If no client is connected yet (e.g. the
+    // puller's first fetch raced ahead of the stdio handshake), this
+    // throws — swallow it; the next call to tools/list will pick up the
+    // new policy regardless.
+    try {
+      this.server.sendToolListChanged();
+    } catch (err) {
+      log.debug("sendToolListChanged not yet deliverable", { err: String(err) });
+    }
   }
 
   private handleListTools(): { tools: Tool[] } {

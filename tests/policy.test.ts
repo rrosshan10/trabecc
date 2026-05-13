@@ -71,6 +71,91 @@ describe("PolicyEngine", () => {
     assert.equal(engine.evaluate("fs__write_file").effect, "allow");
   });
 
+  it("'contains' operator blocks args containing a substring (case-insensitive)", () => {
+    const engine = new PolicyEngine(
+      [
+        { match: "*", effect: "deny", when: { prompt: { contains: "drop table" } }, reason: "SQL-y prompt" },
+        { match: "*", effect: "allow" },
+      ],
+      "deny",
+    );
+    assert.equal(engine.evaluate("db__query", { prompt: "please DROP TABLE users" }).effect, "deny");
+    assert.equal(engine.evaluate("db__query", { prompt: "list the tables" }).effect, "allow");
+  });
+
+  it("'containsAny' operator matches if any keyword is present", () => {
+    const engine = new PolicyEngine(
+      [
+        {
+          match: "*",
+          effect: "deny",
+          when: { content: { containsAny: ["password", "ssn", "api_key"] } },
+          reason: "PII",
+        },
+      ],
+      "allow",
+    );
+    assert.equal(engine.evaluate("any__tool", { content: "here is my SSN: 123" }).effect, "deny");
+    assert.equal(engine.evaluate("any__tool", { content: "nothing sensitive" }).effect, "allow");
+  });
+
+  it("'notContains' only fires when the substring is ABSENT", () => {
+    const engine = new PolicyEngine(
+      [{ match: "*", effect: "deny", when: { agreement: { notContains: "I accept" } } }],
+      "allow",
+    );
+    assert.equal(engine.evaluate("any__tool", { agreement: "" }).effect, "deny");
+    assert.equal(engine.evaluate("any__tool", { agreement: "I accept the terms" }).effect, "allow");
+  });
+
+  it("'matches' operator runs a case-insensitive regex", () => {
+    const engine = new PolicyEngine(
+      [
+        {
+          match: "image__*",
+          effect: "deny",
+          when: { description: { matches: "\\b(nude|nsfw|gore)\\b" } },
+          reason: "content-safety",
+        },
+      ],
+      "allow",
+    );
+    assert.equal(engine.evaluate("image__generate", { description: "NSFW please" }).effect, "deny");
+    assert.equal(engine.evaluate("image__generate", { description: "a sunset" }).effect, "allow");
+  });
+
+  it("invalid regex in 'matches' fails closed (clause never matches)", () => {
+    const engine = new PolicyEngine(
+      [
+        { match: "*", effect: "deny", when: { x: { matches: "[unclosed" } } },
+        { match: "*", effect: "allow" },
+      ],
+      "deny",
+    );
+    // The deny rule never fires because its regex is invalid, so the next rule applies.
+    assert.equal(engine.evaluate("any__tool", { x: "[unclosed" }).effect, "allow");
+  });
+
+  it("operators stringify non-string args (so JSON values can be searched)", () => {
+    const engine = new PolicyEngine(
+      [{ match: "*", effect: "deny", when: { payload: { contains: "admin" } } }],
+      "allow",
+    );
+    assert.equal(
+      engine.evaluate("any__tool", { payload: { role: "admin", id: 42 } }).effect,
+      "deny",
+    );
+  });
+
+  it("backward-compat: string form of 'when' still means glob match", () => {
+    const engine = new PolicyEngine(
+      [{ match: "fs__write_*", effect: "deny", when: { path: "/etc/*" } }],
+      "allow",
+    );
+    assert.equal(engine.evaluate("fs__write_file", { path: "/etc/hosts" }).effect, "deny");
+    assert.equal(engine.evaluate("fs__write_file", { path: "/tmp/foo" }).effect, "allow");
+  });
+
   it("populates reason and matched rule", () => {
     const engine = new PolicyEngine(
       [{ match: "fs__write_*", effect: "deny", reason: "writes require review" }],

@@ -14,6 +14,21 @@ import { ensureSchema, recentEvents, statsForOrg } from "./db.ts";
 import { requireAuth, getAuth } from "./auth.ts";
 import { handleIngest } from "./ingest.ts";
 import { handleDashboard } from "./dashboard.ts";
+import {
+  handleList as policiesList,
+  handleGet as policiesGet,
+  handleCreate as policiesCreate,
+  handleUpdate as policiesUpdate,
+  handleDelete as policiesDelete,
+} from "./policies.ts";
+import {
+  pageList as policiesPageList,
+  pageNew as policiesPageNew,
+  pageEdit as policiesPageEdit,
+  postCreate as policiesPostCreate,
+  postUpdate as policiesPostUpdate,
+  postDelete as policiesPostDelete,
+} from "./policies-ui.ts";
 
 const app = new Hono();
 
@@ -36,8 +51,16 @@ app.get("/v1/health", (c) =>
   c.json({ ok: true, version: "0.2.0", service: "trabecc-cloud" }),
 );
 
-// Browser dashboard (auth via ?key=)
+// ============================================================
+// BROWSER UI (?key= auth)
+// ============================================================
 app.get("/", handleDashboard);
+app.get("/policies", policiesPageList);
+app.get("/policies/new", policiesPageNew);
+app.post("/policies/new", policiesPostCreate);
+app.get("/policies/:id", policiesPageEdit);
+app.post("/policies/:id", policiesPostUpdate);
+app.post("/policies/:id/delete", policiesPostDelete);
 
 // ============================================================
 // AUTHENTICATED API
@@ -62,6 +85,13 @@ v1.get("/stats", async (c) => {
   const sinceMs = Date.now() - windowMinutes * 60_000;
   return c.json(await statsForOrg(auth.orgId, sinceMs));
 });
+
+// Policies — REST API used by the OSS gateway (v0.3.1) to pull rules.
+v1.get("/policies", policiesList);
+v1.get("/policies/:id", policiesGet);
+v1.post("/policies", policiesCreate);
+v1.patch("/policies/:id", policiesUpdate);
+v1.delete("/policies/:id", policiesDelete);
 
 app.route("/v1", v1);
 

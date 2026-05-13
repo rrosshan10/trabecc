@@ -84,6 +84,26 @@ export const SCHEMA_SQL = /* sql */ `
     received_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     dropped      INTEGER NOT NULL
   );
+
+  -- Cloud-managed policies. Users create these via the dashboard UI; OSS
+  -- gateways pull them via GET /v1/policies and merge with YAML rules.
+  -- match_glob + when_clauses match the OSS PolicyEngine wire format
+  -- exactly so the OSS can construct a Rule from a row with no translation.
+  CREATE TABLE IF NOT EXISTS policies (
+    id            TEXT PRIMARY KEY,
+    org_id        TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,
+    description   TEXT,
+    match_glob    TEXT NOT NULL,
+    when_clauses  JSONB,
+    effect        TEXT NOT NULL CHECK (effect IN ('allow','deny')),
+    reason        TEXT,
+    enabled       BOOLEAN NOT NULL DEFAULT TRUE,
+    template      TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  );
+  CREATE INDEX IF NOT EXISTS idx_policies_org ON policies(org_id, enabled);
 `;
 
 let schemaApplied = false;
@@ -303,6 +323,157 @@ export async function listKeysForOrg(orgId: string): Promise<Array<{ id: string;
     id: r.id, name: r.name, lastFour: r.last_four,
     createdAt: r.created_at, lastUsedAt: r.last_used_at, revoked: r.revoked_at !== null,
   }));
+}
+
+// ============================================================
+// POLICIES — CRUD
+// ============================================================
+
+export type WhenClauseObject = {
+  glob?: string;
+  contains?: string;
+  containsAny?: string[];
+  notContains?: string;
+  matches?: string;
+};
+export type WhenClause = string | WhenClauseObject;
+
+export type PolicyRecord = {
+  id: string;
+  orgId: string;
+  name: string;
+  description: string | null;
+  matchGlob: string;
+  whenClauses: Record<string, WhenClause> | null;
+  effect: "allow" | "deny";
+  reason: string | null;
+  enabled: boolean;
+  template: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type PolicyInput = {
+  name: string;
+  description?: string | null;
+  matchGlob: string;
+  whenClauses?: Record<string, WhenClause> | null;
+  effect: "allow" | "deny";
+  reason?: string | null;
+  enabled?: boolean;
+  template?: string | null;
+};
+
+type PolicyRow = {
+  id: string;
+  org_id: string;
+  name: string;
+  description: string | null;
+  match_glob: string;
+  when_clauses: unknown;
+  effect: "allow" | "deny";
+  reason: string | null;
+  enabled: boolean;
+  template: string | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+function rowToPolicy(r: PolicyRow): PolicyRecord {
+  // postgres.js's JSONB handling is version-dependent — sometimes the driver
+  // hands us a parsed object, sometimes a raw JSON string. Normalize both.
+  let whenClauses: Record<string, WhenClause> | null = null;
+  if (r.when_clauses !== null && r.when_clauses !== undefined) {
+    if (typeof r.when_clauses === "string") {
+      try {
+        whenClauses = JSON.parse(r.when_clauses) as Record<string, WhenClause>;
+      } catch {
+        whenClauses = null;
+      }
+    } else {
+      whenClauses = r.when_clauses as Record<string, WhenClause>;
+    }
+  }
+  return {
+    id: r.id,
+    orgId: r.org_id,
+    name: r.name,
+    description: r.description,
+    matchGlob: r.match_glob,
+    whenClauses,
+    effect: r.effect,
+    reason: r.reason,
+    enabled: r.enabled,
+    template: r.template,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
+}
+
+export async function listPolicies(orgId: string, onlyEnabled = false): Promise<PolicyRecord[]> {
+  const rows = onlyEnabled
+    ? await sql<PolicyRow[]>`
+        SELECT * FROM policies WHERE org_id = ${orgId} AND enabled = TRUE
+        ORDER BY created_at DESC`
+    : await sql<PolicyRow[]>`
+        SELECT * FROM policies WHERE org_id = ${orgId}
+        ORDER BY created_at DESC`;
+  return rows.map(rowToPolicy);
+}
+
+export async function getPolicy(orgId: string, id: string): Promise<PolicyRecord | null> {
+  const rows = await sql<PolicyRow[]>`
+    SELECT * FROM policies WHERE org_id = ${orgId} AND id = ${id} LIMIT 1`;
+  return rows[0] ? rowToPolicy(rows[0]) : null;
+}
+
+export async function createPolicy(orgId: string, input: PolicyInput): Promise<PolicyRecord> {
+  const id = `pol_${randomId(14)}`;
+  const row = {
+    id,
+    org_id: orgId,
+    name: input.name,
+    description: input.description ?? null,
+    match_glob: input.matchGlob,
+    when_clauses: input.whenClauses ? JSON.stringify(input.whenClauses) : null,
+    effect: input.effect,
+    reason: input.reason ?? null,
+    enabled: input.enabled ?? true,
+    template: input.template ?? null,
+  };
+  await sql`INSERT INTO policies ${sql(row)}`;
+  const created = await getPolicy(orgId, id);
+  if (!created) throw new Error("policy insert returned but row not visible");
+  return created;
+}
+
+export async function updatePolicy(
+  orgId: string,
+  id: string,
+  patch: Partial<PolicyInput>,
+): Promise<PolicyRecord | null> {
+  const fields: Record<string, unknown> = { updated_at: sql`NOW()` };
+  if (patch.name !== undefined) fields["name"] = patch.name;
+  if (patch.description !== undefined) fields["description"] = patch.description;
+  if (patch.matchGlob !== undefined) fields["match_glob"] = patch.matchGlob;
+  if (patch.whenClauses !== undefined)
+    fields["when_clauses"] = patch.whenClauses ? JSON.stringify(patch.whenClauses) : null;
+  if (patch.effect !== undefined) fields["effect"] = patch.effect;
+  if (patch.reason !== undefined) fields["reason"] = patch.reason;
+  if (patch.enabled !== undefined) fields["enabled"] = patch.enabled;
+  if (patch.template !== undefined) fields["template"] = patch.template;
+
+  if (Object.keys(fields).length === 1) {
+    // only updated_at — nothing to actually patch
+    return getPolicy(orgId, id);
+  }
+  await sql`UPDATE policies SET ${sql(fields)} WHERE org_id = ${orgId} AND id = ${id}`;
+  return getPolicy(orgId, id);
+}
+
+export async function deletePolicy(orgId: string, id: string): Promise<boolean> {
+  const result = await sql`DELETE FROM policies WHERE org_id = ${orgId} AND id = ${id}`;
+  return (result.count ?? 0) > 0;
 }
 
 // ============================================================

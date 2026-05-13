@@ -14,8 +14,9 @@
   "scripts": {
     "start": "node src/cli.ts",
     "dev": "node --watch src/cli.ts",
-    "test": "node --test tests/policy.test.ts tests/namespace.test.ts tests/ratelimit.test.ts tests/redact.test.ts tests/cloud_sync.test.ts tests/audit_store.test.ts",
+    "test": "node --test tests/policy.test.ts tests/namespace.test.ts tests/ratelimit.test.ts tests/redact.test.ts tests/cloud_sync.test.ts tests/audit_store.test.ts tests/cloud_policy_pull.test.ts",
     "test:e2e": "node tests/e2e.smoke.ts",
+    "test:cloud-pull": "node tests/cloud_pull.integration.ts",
     "typecheck": "tsc --noEmit",
     "build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/audit/schema.sql dist/audit/schema.sql",
     "prepack": "npm run build",
