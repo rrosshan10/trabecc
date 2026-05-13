@@ -1,6 +1,6 @@
 {
   "name": "trabecc",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "The gateway and governance layer for MCP. Audit, policy, and rate-limiting for AI tool calls.",
   "license": "MIT",
   "type": "module",
