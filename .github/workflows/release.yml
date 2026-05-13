@@ -1,13 +1,25 @@
 name: release
 
+# Runs on every `v*` tag push. Publishes to npm via OIDC Trusted Publishing
+# (https://docs.npmjs.com/trusted-publishers). No NPM_TOKEN secret needed —
+# npm exchanges the GitHub OIDC token for a short-lived publish credential.
+#
+# Prerequisites (one-time, in the npm web UI):
+#   npmjs.com → trabecc package → Settings → Publishing access
+#   → Trusted Publisher: GitHub Actions
+#     Organization or user: rrosshan10
+#     Repository:           trabecc
+#     Workflow filename:    release.yml
+#     Environment:          (leave blank unless you add one)
+
 on:
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: write
-  id-token: write   # required for npm provenance
+  contents: write   # softprops/action-gh-release needs this to create the GitHub release
+  id-token: write   # required: lets npm CLI request an OIDC token from GitHub for trusted publishing + provenance
 
 jobs:
   publish:
@@ -21,12 +33,22 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
+      # OIDC trusted publishing requires npm >= 11.5.1. Node 24 ships with
+      # 11.8 which is fine, but make it explicit so a Node bump can't
+      # silently regress this.
+      - name: Upgrade npm to latest (>= 11.5.1 required for OIDC trust)
+        run: npm install -g npm@latest
+
       - run: npm ci --no-audit --no-fund
+
       - run: npx tsc --noEmit
-      - name: Publish to npm with provenance
+
+      # No NODE_AUTH_TOKEN env: when no token is present and id-token: write
+      # is granted, npm CLI automatically uses the OIDC token from GitHub
+      # to authenticate AND to attach a provenance attestation. The same
+      # flow signs and uploads the Sigstore record.
+      - name: Publish to npm (OIDC trusted publishing + provenance)
         run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
