@@ -10,10 +10,13 @@
 
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
-import { ensureSchema, recentEvents, statsForOrg } from "./db.ts";
+import { ensureSchema, recentEvents, statsForOrg, getOrg, countActiveHosts, countEventsToday } from "./db.ts";
 import { requireAuth, getAuth } from "./auth.ts";
+import { PLANS, nextTierUpgradeUrl, PRO_UPGRADE_URL } from "./plans.ts";
 import { handleIngest } from "./ingest.ts";
 import { handleDashboard } from "./dashboard.ts";
+import { pageSignup, postSignup } from "./signup.ts";
+import { handleStripeWebhook } from "./stripe-webhook.ts";
 import {
   handleList as policiesList,
   handleGet as policiesGet,
@@ -52,9 +55,19 @@ app.get("/v1/health", (c) =>
 );
 
 // ============================================================
+// STRIPE WEBHOOK
+// ============================================================
+// Stripe-signed; mounted outside the requireAuth guard. Must be defined
+// before the catch-all CORS branch otherwise the signed-body integrity
+// could be perturbed by Hono's automatic body parsing on later middleware.
+app.post("/v1/stripe/webhook", handleStripeWebhook);
+
+// ============================================================
 // BROWSER UI (?key= auth)
 // ============================================================
 app.get("/", handleDashboard);
+app.get("/signup", pageSignup);
+app.post("/signup", postSignup);
 app.get("/policies", policiesPageList);
 app.get("/policies/new", policiesPageNew);
 app.post("/policies/new", policiesPostCreate);
@@ -81,9 +94,47 @@ v1.get("/audit", async (c) => {
 v1.get("/stats", async (c) => {
   const auth = getAuth(c);
   await ensureSchema();
-  const windowMinutes = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));
-  const sinceMs = Date.now() - windowMinutes * 60_000;
-  return c.json(await statsForOrg(auth.orgId, sinceMs));
+  // Plan-cap on the time window: free tier can't query beyond its
+  // retention period (7 days) even if the rows happen to still be there.
+  const org = await getOrg(auth.orgId);
+  if (!org) return c.json({ error: "org not found" }, 404);
+  const limits = PLANS[org.plan];
+  const requestedWindow = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));
+  const cappedWindow = Math.min(requestedWindow, limits.maxQueryWindowMinutes);
+  const sinceMs = Date.now() - cappedWindow * 60_000;
+  const data = await statsForOrg(auth.orgId, sinceMs);
+  return c.json({
+    ...data,
+    windowMinutes: cappedWindow,
+    capped: cappedWindow < requestedWindow,
+    plan: org.plan,
+  });
+});
+
+// /v1/plan — current usage, limits, and the upgrade target. Used by the
+// dashboard banner and by external integrations (Stripe webhook later).
+v1.get("/plan", async (c) => {
+  const auth = getAuth(c);
+  await ensureSchema();
+  const org = await getOrg(auth.orgId);
+  if (!org) return c.json({ error: "org not found" }, 404);
+  const limits = PLANS[org.plan];
+  const [hosts, eventsToday] = await Promise.all([
+    countActiveHosts(auth.orgId),
+    countEventsToday(auth.orgId),
+  ]);
+  const upgrade = nextTierUpgradeUrl(org.plan);
+  return c.json({
+    org: { id: org.id, name: org.name, plan: org.plan },
+    limits,
+    usage: {
+      hosts,
+      eventsToday,
+      hostsPct: Math.round((hosts / limits.maxHosts) * 100),
+      eventsPct: Math.round((eventsToday / limits.maxEventsPerDay) * 100),
+    },
+    upgrade,
+  });
 });
 
 // Policies — REST API used by the OSS gateway (v0.3.1) to pull rules.

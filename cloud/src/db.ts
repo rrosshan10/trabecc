@@ -30,10 +30,19 @@ export const SCHEMA_SQL = /* sql */ `
   CREATE TABLE IF NOT EXISTS organizations (
     id            TEXT PRIMARY KEY,
     name          TEXT NOT NULL,
-    plan          TEXT NOT NULL DEFAULT 'pro' CHECK (plan IN ('pro','team','enterprise')),
-    retention_days INTEGER NOT NULL DEFAULT 90,
+    plan          TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free','pro','team','enterprise')),
+    retention_days INTEGER NOT NULL DEFAULT 7,
+    email         TEXT,
+    stripe_customer_id TEXT,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+  -- Idempotent migrations: existing rows from earlier versions are kept on
+  -- the old constraint until we drop it here.
+  ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_plan_check;
+  ALTER TABLE organizations ADD CONSTRAINT organizations_plan_check
+    CHECK (plan IN ('free','pro','team','enterprise'));
+  ALTER TABLE organizations ADD COLUMN IF NOT EXISTS email TEXT;
+  ALTER TABLE organizations ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
 
   CREATE TABLE IF NOT EXISTS api_keys (
     id            TEXT PRIMARY KEY,
@@ -104,6 +113,18 @@ export const SCHEMA_SQL = /* sql */ `
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
   CREATE INDEX IF NOT EXISTS idx_policies_org ON policies(org_id, enabled);
+
+  -- Stripe webhook idempotency log. Every event Stripe sends has a unique id
+  -- (evt_xxx); we record processing here so retries from Stripe (which it
+  -- WILL do on any non-2xx) don't double-apply plan changes.
+  CREATE TABLE IF NOT EXISTS stripe_events (
+    id            TEXT PRIMARY KEY,
+    type          TEXT NOT NULL,
+    received_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    processed_at  TIMESTAMPTZ,
+    org_id        TEXT,
+    note          TEXT
+  );
 `;
 
 let schemaApplied = false;
@@ -288,10 +309,18 @@ export async function statsForOrg(
 // ADMIN OPERATIONS — used by src/admin.ts CLI
 // ============================================================
 
-export async function createOrg(name: string, plan: "pro" | "team" | "enterprise" = "pro"): Promise<{ id: string }> {
+export async function createOrg(
+  name: string,
+  plan: "free" | "pro" | "team" | "enterprise" = "free",
+  email: string | null = null,
+): Promise<{ id: string }> {
   const id = `org_${randomId(16)}`;
-  const retentionDays = plan === "team" ? 365 : plan === "enterprise" ? 3650 : 90;
-  await sql`INSERT INTO organizations ${sql({ id, name, plan, retention_days: retentionDays })}`;
+  const retentionDays =
+    plan === "enterprise" ? 3650 :
+    plan === "team" ? 365 :
+    plan === "pro" ? 90 :
+    7;
+  await sql`INSERT INTO organizations ${sql({ id, name, plan, retention_days: retentionDays, email })}`;
   return { id };
 }
 
@@ -323,6 +352,146 @@ export async function listKeysForOrg(orgId: string): Promise<Array<{ id: string;
     id: r.id, name: r.name, lastFour: r.last_four,
     createdAt: r.created_at, lastUsedAt: r.last_used_at, revoked: r.revoked_at !== null,
   }));
+}
+
+// ============================================================
+// PLAN / USAGE COUNTERS — used by ingest + dashboard limit checks
+// ============================================================
+
+export type OrgRecord = {
+  id: string;
+  name: string;
+  plan: "free" | "pro" | "team" | "enterprise";
+  retentionDays: number;
+  email: string | null;
+  stripeCustomerId: string | null;
+  createdAt: Date;
+};
+
+export async function getOrg(orgId: string): Promise<OrgRecord | null> {
+  const rows = await sql<Array<{
+    id: string;
+    name: string;
+    plan: OrgRecord["plan"];
+    retention_days: number;
+    email: string | null;
+    stripe_customer_id: string | null;
+    created_at: Date;
+  }>>`
+    SELECT id, name, plan, retention_days, email, stripe_customer_id, created_at
+    FROM organizations WHERE id = ${orgId} LIMIT 1
+  `;
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id,
+    name: r.name,
+    plan: r.plan,
+    retentionDays: r.retention_days,
+    email: r.email,
+    stripeCustomerId: r.stripe_customer_id,
+    createdAt: r.created_at,
+  };
+}
+
+export async function updateOrgPlan(orgId: string, plan: OrgRecord["plan"], retentionDays: number): Promise<void> {
+  await sql`UPDATE organizations SET plan = ${plan}, retention_days = ${retentionDays} WHERE id = ${orgId}`;
+}
+
+export async function setOrgStripeCustomer(orgId: string, stripeCustomerId: string): Promise<void> {
+  await sql`UPDATE organizations SET stripe_customer_id = ${stripeCustomerId} WHERE id = ${orgId}`;
+}
+
+export async function findOrgByStripeCustomer(stripeCustomerId: string): Promise<OrgRecord | null> {
+  const rows = await sql<Array<{
+    id: string;
+    name: string;
+    plan: OrgRecord["plan"];
+    retention_days: number;
+    email: string | null;
+    stripe_customer_id: string | null;
+    created_at: Date;
+  }>>`
+    SELECT id, name, plan, retention_days, email, stripe_customer_id, created_at
+    FROM organizations WHERE stripe_customer_id = ${stripeCustomerId} LIMIT 1
+  `;
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id, name: r.name, plan: r.plan, retentionDays: r.retention_days,
+    email: r.email, stripeCustomerId: r.stripe_customer_id, createdAt: r.created_at,
+  };
+}
+
+export async function findOrgByEmail(email: string): Promise<OrgRecord | null> {
+  const rows = await sql<Array<{
+    id: string;
+    name: string;
+    plan: OrgRecord["plan"];
+    retention_days: number;
+    email: string | null;
+    stripe_customer_id: string | null;
+    created_at: Date;
+  }>>`
+    SELECT id, name, plan, retention_days, email, stripe_customer_id, created_at
+    FROM organizations WHERE LOWER(email) = LOWER(${email})
+    ORDER BY created_at DESC
+    LIMIT 1
+  `;
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id, name: r.name, plan: r.plan, retentionDays: r.retention_days,
+    email: r.email, stripeCustomerId: r.stripe_customer_id, createdAt: r.created_at,
+  };
+}
+
+// ============================================================
+// STRIPE EVENT IDEMPOTENCY
+// ============================================================
+
+/** Returns true if this event id was already recorded (skip processing). */
+export async function stripeEventAlreadySeen(eventId: string): Promise<boolean> {
+  const rows = await sql<Array<{ id: string }>>`
+    SELECT id FROM stripe_events WHERE id = ${eventId} LIMIT 1
+  `;
+  return rows.length > 0;
+}
+
+export async function recordStripeEvent(
+  eventId: string,
+  type: string,
+  orgId: string | null,
+  note: string | null,
+): Promise<void> {
+  await sql`
+    INSERT INTO stripe_events (id, type, processed_at, org_id, note)
+    VALUES (${eventId}, ${type}, NOW(), ${orgId}, ${note})
+    ON CONFLICT (id) DO NOTHING
+  `;
+}
+
+/** Count of distinct install_ids that ingested in the last `windowMs`. */
+export async function countActiveHosts(orgId: string, windowMs: number = 7 * 24 * 60 * 60 * 1000): Promise<number> {
+  const sinceMs = Date.now() - windowMs;
+  const rows = await sql<Array<{ c: string }>>`
+    SELECT COUNT(DISTINCT install_id) AS c
+    FROM audit_events
+    WHERE org_id = ${orgId} AND ts >= ${sinceMs}
+  `;
+  return Number(rows[0]?.c ?? 0);
+}
+
+/** Count of events ingested today (UTC midnight to now). */
+export async function countEventsToday(orgId: string): Promise<number> {
+  const now = new Date();
+  const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const rows = await sql<Array<{ c: string }>>`
+    SELECT COUNT(*) AS c
+    FROM audit_events
+    WHERE org_id = ${orgId} AND ts >= ${utcMidnight}
+  `;
+  return Number(rows[0]?.c ?? 0);
 }
 
 // ============================================================

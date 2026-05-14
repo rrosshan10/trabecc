@@ -162,11 +162,55 @@ DATABASE_URL=postgres://…prod… npm run admin -- create-key org_abc "producti
 #     https://api.trabecc.com/?key=tk_live_..."
 ```
 
+## Stripe webhook — auto-upgrade on payment
+
+Once a customer pays through the Pro Payment Link the cloud flips their org
+from `free` → `pro` automatically. No manual provisioning, no email-the-key
+back-and-forth.
+
+### 1. Set the env vars
+
+In Vercel **Settings → Environment Variables**:
+
+| Variable | Where to find it | Used for |
+| --- | --- | --- |
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API keys (Secret key, `sk_live_...`) | initializing the SDK so signature verification works |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Developers → Webhooks → your endpoint → "Signing secret" (`whsec_...`) | verifying every webhook came from Stripe |
+
+### 2. Create the webhook endpoint in Stripe
+
+1. Stripe Dashboard → Developers → Webhooks → **Add endpoint**.
+2. URL: `https://api.trabecc.com/v1/stripe/webhook`.
+3. Events to send (these are all we handle):
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+4. Save → copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+### 3. How the matching works
+
+When a logged-in user clicks the Upgrade button on their dashboard, we
+append `client_reference_id=org_xxx` to the Stripe Payment Link URL. The
+webhook reads this from `checkout.session.completed` and upgrades exactly
+that org. If a user pays via a raw Payment Link (no `client_reference_id`),
+we fall back to matching by email.
+
+The `stripe_events` table is the idempotency log — Stripe retries on any
+non-2xx response, so we only process each event id once.
+
+### 4. Test in Stripe CLI
+
+```sh
+stripe listen --forward-to localhost:8787/v1/stripe/webhook
+# in another terminal:
+stripe trigger checkout.session.completed
+```
+
+Watch your dashboard refresh — the org's plan badge flips to `pro`.
+
 ## What's NOT in v0.2.0
 
-- **Signup UI** — first 10 customers are manually provisioned via CLI.
-- **Stripe webhook → automatic API key** — wire this up in v0.3 when
-  there are >5 paying customers and CLI provisioning becomes a chore.
 - **Anomaly alerts** — Phase 12.
 - **Multi-host views with charts** — current dashboard is a single
   table; the OSS-side dashboard has the SVG charts. Cloud will get them
@@ -187,3 +231,5 @@ DATABASE_URL=postgres://…prod… npm run admin -- create-key org_abc "producti
 | `GET /v1/audit?limit=` | Bearer | recent events for the authenticated org |
 | `GET /v1/stats?windowMinutes=` | Bearer | aggregated counts |
 | `GET /?key=tk_live_…` | query param | browser dashboard |
+| `POST /v1/stripe/webhook` | Stripe signature | auto-upgrade orgs on payment |
+| `GET /signup` | none | self-serve signup form |

@@ -4,7 +4,17 @@
 // will swap this for a proper session cookie + login).
 
 import type { Context } from "hono";
-import { ensureSchema, findOrgByApiKey, recentEvents, statsForOrg, type Outcome } from "./db.ts";
+import {
+  ensureSchema,
+  findOrgByApiKey,
+  recentEvents,
+  statsForOrg,
+  getOrg,
+  countActiveHosts,
+  countEventsToday,
+  type Outcome,
+} from "./db.ts";
+import { PLANS, nextTierUpgradeUrl } from "./plans.ts";
 
 const C = {
   bg: "#0a0a0c",
@@ -110,13 +120,46 @@ export async function handleDashboard(c: Context): Promise<Response> {
   }
 
   await ensureSchema();
-  const windowMinutes = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));
+  // Plan-cap the dashboard window so free-tier users can't accidentally
+  // query the whole 90-day Pro retention window for free.
+  const org = await getOrg(auth.orgId);
+  const plan = org?.plan ?? "free";
+  const limits = PLANS[plan];
+  const requestedWindow = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));
+  const windowMinutes = Math.min(requestedWindow, limits.maxQueryWindowMinutes);
+  const windowCapped = windowMinutes < requestedWindow;
   const sinceMs = Date.now() - windowMinutes * 60_000;
 
-  const [stats, events] = await Promise.all([
+  const [stats, events, hosts, eventsToday] = await Promise.all([
     statsForOrg(auth.orgId, sinceMs),
     recentEvents(auth.orgId, 50),
+    countActiveHosts(auth.orgId),
+    countEventsToday(auth.orgId),
   ]);
+
+  const hostsPct = Math.min(100, Math.round((hosts / limits.maxHosts) * 100));
+  const eventsPct = Math.min(100, Math.round((eventsToday / limits.maxEventsPerDay) * 100));
+  const showUpgrade = plan !== "enterprise" && (hostsPct >= 70 || eventsPct >= 70 || windowCapped);
+  const upgrade = nextTierUpgradeUrl(plan);
+  // Append client_reference_id to Stripe Payment Links so the webhook can
+  // match the payment back to this org without an email lookup. mailto:
+  // upgrade URLs (team/enterprise) are left untouched.
+  const upgradeHref = upgrade.url.startsWith("https://buy.stripe.com/")
+    ? `${upgrade.url}?client_reference_id=${encodeURIComponent(auth.orgId)}${org?.email ? `&prefilled_email=${encodeURIComponent(org.email)}` : ""}`
+    : upgrade.url;
+
+  const planBanner = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.85rem 1.25rem;margin-bottom:1.5rem;background:${showUpgrade ? "rgba(220,20,60,.08)" : C.surface};border:1px solid ${showUpgrade ? "rgba(220,20,60,.3)" : C.border};border-radius:10px;font-size:.85rem;flex-wrap:wrap">
+      <div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap">
+        <span style="background:${plan === "free" ? C.fgFaint : C.brand};color:#fff;padding:.2rem .6rem;border-radius:4px;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase">${esc(plan)}</span>
+        <span style="color:${C.fgDim}"><strong style="color:${C.fg}">${hosts}/${limits.maxHosts}</strong> hosts (7d)</span>
+        <span style="color:${C.fgDim}"><strong style="color:${C.fg}">${eventsToday.toLocaleString()}/${limits.maxEventsPerDay.toLocaleString()}</strong> events today</span>
+        <span style="color:${C.fgDim}">retention: <strong style="color:${C.fg}">${limits.retentionDays}d</strong></span>
+      </div>
+      ${plan !== "enterprise" ? `<a href="${esc(upgradeHref)}" style="background:${C.brand};color:#fff;padding:.4rem .9rem;border-radius:6px;font-weight:600;font-size:.8rem;text-decoration:none">${showUpgrade ? "Upgrade to " + upgrade.toPlan + " →" : "Manage plan"}</a>` : ""}
+    </div>
+    ${windowCapped ? `<div style="padding:.6rem 1rem;margin-bottom:1rem;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;font-size:.8rem;color:#f59e0b">Showing capped to ${limits.retentionDays}d (${plan} plan limit). <a href="${esc(upgradeHref)}" style="color:#f59e0b;text-decoration:underline">Upgrade</a> to query further back.</div>` : ""}
+  `;
 
   const statCards = [
     { label: "Total calls", value: String(stats.total), cls: "" },
@@ -162,6 +205,8 @@ export async function handleDashboard(c: Context): Promise<Response> {
       <div>refreshing every 10s</div>
     </div>
   </header>
+
+  ${planBanner}
 
   <h2 class="section">Last ${windowMinutes >= 1440 ? `${windowMinutes / 1440}d` : windowMinutes >= 60 ? `${windowMinutes / 60}h` : `${windowMinutes}m`} across all hosts</h2>
   <div class="stat-grid">${statCards}</div>
