@@ -5,7 +5,7 @@
 // issue, add Turnstile or email-verify in v0.5.
 
 import type { Context } from "hono";
-import { ensureSchema, createOrg, createApiKey, getOrg } from "./db.ts";
+import { ensureSchema, createOrg, createApiKey, getOrg } from "./db.js";
 
 const C = {
   bg: "#0a0a0c",

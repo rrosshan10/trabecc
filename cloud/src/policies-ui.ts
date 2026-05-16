@@ -17,7 +17,7 @@ import {
   deletePolicy,
   type PolicyRecord,
   type WhenClause,
-} from "./db.ts";
+} from "./db.js";
 
 const C = {
   bg: "#0a0a0c",

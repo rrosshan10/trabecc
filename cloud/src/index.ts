@@ -10,20 +10,20 @@
 
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
-import { ensureSchema, recentEvents, statsForOrg, getOrg, countActiveHosts, countEventsToday } from "./db.ts";
-import { requireAuth, getAuth } from "./auth.ts";
-import { PLANS, nextTierUpgradeUrl, PRO_UPGRADE_URL } from "./plans.ts";
-import { handleIngest } from "./ingest.ts";
-import { handleDashboard } from "./dashboard.ts";
-import { pageSignup, postSignup } from "./signup.ts";
-import { handleStripeWebhook } from "./stripe-webhook.ts";
+import { ensureSchema, recentEvents, statsForOrg, getOrg, countActiveHosts, countEventsToday } from "./db.js";
+import { requireAuth, getAuth } from "./auth.js";
+import { PLANS, nextTierUpgradeUrl, PRO_UPGRADE_URL } from "./plans.js";
+import { handleIngest } from "./ingest.js";
+import { handleDashboard } from "./dashboard.js";
+import { pageSignup, postSignup } from "./signup.js";
+import { handleStripeWebhook } from "./stripe-webhook.js";
 import {
   handleList as policiesList,
   handleGet as policiesGet,
   handleCreate as policiesCreate,
   handleUpdate as policiesUpdate,
   handleDelete as policiesDelete,
-} from "./policies.ts";
+} from "./policies.js";
 import {
   pageList as policiesPageList,
   pageNew as policiesPageNew,
@@ -31,7 +31,7 @@ import {
   postCreate as policiesPostCreate,
   postUpdate as policiesPostUpdate,
   postDelete as policiesPostDelete,
-} from "./policies-ui.ts";
+} from "./policies-ui.js";
 
 const app = new Hono();
 

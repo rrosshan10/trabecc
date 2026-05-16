@@ -10,7 +10,7 @@
 //   npm run admin -- list-keys org_abc123
 //   npm run admin -- migrate
 
-import { ensureSchema, createOrg, createApiKey, listOrgs, listKeysForOrg, sql } from "./db.ts";
+import { ensureSchema, createOrg, createApiKey, listOrgs, listKeysForOrg, sql } from "./db.js";
 
 async function main(): Promise<void> {
   const [cmd, ...args] = process.argv.slice(2);

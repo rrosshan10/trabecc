@@ -13,8 +13,8 @@ import {
   countActiveHosts,
   countEventsToday,
   type Outcome,
-} from "./db.ts";
-import { PLANS, nextTierUpgradeUrl } from "./plans.ts";
+} from "./db.js";
+import { PLANS, nextTierUpgradeUrl } from "./plans.js";
 
 const C = {
   bg: "#0a0a0c",

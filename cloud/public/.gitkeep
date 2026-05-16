@@ -1,0 +1,2 @@
+# Empty placeholder so Vercel's static-output check passes.
+# All requests are rewritten to /api/index (see vercel.json) so nothing here is served.

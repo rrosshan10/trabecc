@@ -11,9 +11,9 @@ import {
   countActiveHosts,
   countEventsToday,
   type IngestPayload,
-} from "./db.ts";
-import { getAuth } from "./auth.ts";
-import { PLANS, nextTierUpgradeUrl } from "./plans.ts";
+} from "./db.js";
+import { getAuth } from "./auth.js";
+import { PLANS, nextTierUpgradeUrl } from "./plans.js";
 
 const EventSchema = z.object({
   ts: z.number().int(),
@@ -132,7 +132,7 @@ function withCheckoutRef(url: string, orgId: string, email: string | null): stri
 
 /** Was this install_id seen for the org in the recent (7-day) window? */
 async function isNewInstall(orgId: string, installId: string): Promise<boolean> {
-  const { sql } = await import("./db.ts");
+  const { sql } = await import("./db.js");
   const sinceMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const rows = await sql<Array<{ exists: boolean }>>`
     SELECT EXISTS (

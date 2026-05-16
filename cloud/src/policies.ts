@@ -11,8 +11,8 @@ import {
   updatePolicy,
   deletePolicy,
   type WhenClause,
-} from "./db.ts";
-import { getAuth } from "./auth.ts";
+} from "./db.js";
+import { getAuth } from "./auth.js";
 
 // ---------- input schemas ----------
 

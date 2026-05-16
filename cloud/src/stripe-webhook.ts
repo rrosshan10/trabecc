@@ -14,7 +14,7 @@
 
 import type { Context } from "hono";
 import Stripe from "stripe";
-import { PLANS, isValidPlan, type Plan } from "./plans.ts";
+import { PLANS, isValidPlan, type Plan } from "./plans.js";
 import {
   ensureSchema,
   findOrgByStripeCustomer,
@@ -24,7 +24,7 @@ import {
   updateOrgPlan,
   stripeEventAlreadySeen,
   recordStripeEvent,
-} from "./db.ts";
+} from "./db.js";
 
 const stripeSecret = process.env["STRIPE_SECRET_KEY"];
 const webhookSecret = process.env["STRIPE_WEBHOOK_SECRET"];

@@ -2,7 +2,7 @@
 // it on the Hono context. All API routes that need tenancy mount this.
 
 import type { Context, MiddlewareHandler } from "hono";
-import { findOrgByApiKey } from "./db.ts";
+import { findOrgByApiKey } from "./db.js";
 
 export type AuthContext = {
   orgId: string;
