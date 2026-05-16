@@ -7,7 +7,7 @@
 Instead, use GitHub's private vulnerability reporting:
 [github.com/rrosshan10/trabecc/security/advisories/new](https://github.com/rrosshan10/trabecc/security/advisories/new)
 
-Or email `security@trabecc.com`. Expect an initial response within 72 hours.
+Or email `security@trabecc.com`. Expect an initial response within 2-5 working days.
 
 ## Scope
 
