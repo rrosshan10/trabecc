@@ -412,7 +412,7 @@
         <li><a href="#faq">FAQ</a></li>
         <li><a href="https://github.com/rrosshan10/trabecc">GitHub</a></li>
       </ul>
-      <a class="nav-cta" href="https://buy.stripe.com/fZuaEQ5TqbeU2fC7widUY00">Start free trial</a>
+      <a class="nav-cta" href="https://api.trabecc.com/signup">Start free — no card</a>
     </div>
   </nav>
 
@@ -420,7 +420,7 @@
   <header class="hero container">
     <div class="hero-grid">
       <div>
-        <span class="pill">v0.1.1 · open-source · MIT</span>
+        <span class="pill">open-source · MIT · default-deny</span>
         <h1 class="h1">Trust, but <em>audit</em> — every AI tool call.</h1>
         <p class="lede">
           Trabecc is the gateway between your AI agent and the MCP servers it
@@ -755,7 +755,7 @@
             <text x="1100" y="302" fill="#d4d4d8" font-family="ui-monospace" font-size="11" text-anchor="end">1</text>
           </g>
           <!-- footer note -->
-          <text x="600" y="640" text-anchor="middle" fill="#71717a" font-family="ui-monospace" font-size="11">Trabecc v0.1.1 · MIT · /api/audit</text>
+          <text x="600" y="640" text-anchor="middle" fill="#71717a" font-family="ui-monospace" font-size="11">Trabecc · MIT · /api/audit</text>
         </svg>
       </div>
     </div>
@@ -802,8 +802,8 @@
         <div class="quote-attr">
           <div class="quote-avatar">★</div>
           <div>
-            <div class="quote-name">Customer testimonial — placeholder</div>
-            <div class="quote-role">Replace with real quote post-launch</div>
+            <div class="quote-name">Why Trabecc exists</div>
+            <div class="quote-role">2026 so far: poisoned MCP tool descriptions, hundreds of exposed servers, RCE via config files. Governance stopped being optional.</div>
           </div>
         </div>
       </div>
@@ -818,7 +818,9 @@
         <h2 class="h2">Free forever to self-host. Cloud is one config flag.</h2>
         <p class="section-lede" style="margin-left: auto; margin-right: auto;">
           The OSS works fully without ever phoning home. Cloud retention,
-          alerts, and team dashboards are the same code with one flag flipped.
+          team dashboards, and centrally managed policies are the same code
+          with one flag flipped. Every cloud plan starts free — 1 host,
+          1,000 events/day, no card: <a href="https://api.trabecc.com/signup">create a key in 10 seconds</a>.
         </p>
       </div>
       <div class="pricing-grid">
@@ -840,18 +842,18 @@
           <ul>
             <li>Cloud audit retention (90 days)</li>
             <li>Multi-host dashboards</li>
-            <li>Anomaly alerts (email + webhook)</li>
+            <li>Cloud policy editor — push rules to every host</li>
             <li>Email support</li>
           </ul>
-          <a class="btn btn-primary" href="https://buy.stripe.com/fZuaEQ5TqbeU2fC7widUY00">Start free trial</a>
+          <a class="btn btn-primary" href="https://api.trabecc.com/signup">Start free — no card</a>
         </div>
         <div class="price-card reveal">
           <h3>Team</h3>
           <div class="num">$99 <small>/ user / month</small></div>
           <ul>
-            <li>SSO (Google, Okta)</li>
+            <li>Up to 50 hosts, 1M events/day</li>
             <li>1-year audit retention</li>
-            <li>Policy approval workflow</li>
+            <li>Onboarding call + policy review</li>
             <li>Priority support</li>
           </ul>
           <a class="btn btn-ghost" href="mailto:support.team@trabecc.com?subject=Trabecc%20Team">Contact us</a>
@@ -860,7 +862,7 @@
           <h3>Enterprise</h3>
           <div class="num">Custom</div>
           <ul>
-            <li>SOC 2, on-prem option</li>
+            <li>Self-host / on-prem deployment</li>
             <li>Unlimited retention</li>
             <li>Dedicated support</li>
             <li>Custom integrations</li>
@@ -914,7 +916,7 @@
       <p>60 seconds to install. Default-deny by default. MIT licensed.</p>
       <div class="cta-row" style="justify-content: center;">
         <a class="btn btn-on-brand" href="https://github.com/rrosshan10/trabecc">Get started on GitHub →</a>
-        <a class="btn btn-on-brand-ghost" href="https://buy.stripe.com/fZuaEQ5TqbeU2fC7widUY00">Start Pro free trial</a>
+        <a class="btn btn-on-brand-ghost" href="https://api.trabecc.com/signup">Get a free cloud key</a>
       </div>
     </div>
   </section>
@@ -924,7 +926,7 @@
     <div class="container row">
       <div class="brand-mini">
         <img src="/trabecc_logo.png" alt="" />
-        <span>© 2026 Trabecc · v0.1.1 · MIT</span>
+        <span>© 2026 Trabecc · MIT</span>
       </div>
       <div class="links">
         <a href="https://github.com/rrosshan10/trabecc">GitHub</a>
@@ -952,5 +954,6 @@
       document.querySelectorAll('.reveal').forEach(el => el.classList.add('in'));
     }
   </script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>

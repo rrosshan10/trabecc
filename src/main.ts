@@ -161,6 +161,7 @@ function cmdInit(): void {
     ),
   );
   console.log(`\n  3. ${pc.cyan("trabecc admin")} for the dashboard at http://127.0.0.1:4577`);
+  console.log(`  4. Optional — free multi-host cloud dashboard: ${pc.cyan("https://api.trabecc.com/signup")} (1 host, 1k events/day, no card)`);
 }
 
 function cmdPolicyCheck(tool: string | undefined, configPath: string | undefined): void {

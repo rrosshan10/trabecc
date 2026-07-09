@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-07-10
+
+### Fixed
+- One source of truth for the version string (`src/version.ts`). The MCP
+  handshake, cloud-sync header, policy-pull header, and admin health endpoint
+  previously reported four different versions (0.1.0 / 0.3.1 / 0.1.1).
+- Cloud sync treats HTTP 402 (plan limit) as terminal: the batch is dropped
+  and the upgrade URL from the cloud is logged, instead of retrying silently.
+
+### Changed
+- `trabecc init` next-steps mention the free cloud dashboard.
+- README: badges, corrected Node requirement, free-cloud section.
+
 ## [0.1.1] - 2026-05-08
 
 ### Fixed

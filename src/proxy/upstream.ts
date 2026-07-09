@@ -7,6 +7,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { Tool, CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ServerConfig } from "../config.ts";
 import { createLogger } from "../log.ts";
+import { VERSION } from "../version.ts";
 
 const log = createLogger("upstream");
 
@@ -39,7 +40,7 @@ export class Upstream {
       });
 
       this.client = new Client(
-        { name: "trabecc", version: "0.1.0" },
+        { name: "trabecc", version: VERSION },
         { capabilities: {} },
       );
 

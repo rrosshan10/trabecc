@@ -6,6 +6,7 @@
 
 import type { Rule, WhenClause } from "../config.ts";
 import { createLogger } from "../log.ts";
+import { VERSION } from "../version.ts";
 
 const log = createLogger("cloud-pull");
 
@@ -63,7 +64,7 @@ export class CloudPolicyPuller {
       const res = await this.fetch(this.opts.endpoint + "?enabled=true", {
         headers: {
           authorization: `Bearer ${this.opts.apiKey}`,
-          "x-trabecc-version": "0.3.1",
+          "x-trabecc-version": VERSION,
         },
       });
       if (!res.ok) {

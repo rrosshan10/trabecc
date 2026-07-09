@@ -9,3 +9,6 @@ trabecc.yaml
 audit.db
 audit.db-*
 .trabecc/
+
+# Founder-internal docs — never on the public repo
+internal/

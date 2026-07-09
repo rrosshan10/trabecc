@@ -31,6 +31,7 @@ import { buildRedactor } from "../audit/redact.ts";
 import { CloudSync } from "../audit/sync.ts";
 import { expandHome } from "../config.ts";
 import { createLogger } from "../log.ts";
+import { VERSION } from "../version.ts";
 import type { AuditRecord, CallOutcome } from "../types.ts";
 
 const log = createLogger("gateway");
@@ -79,7 +80,7 @@ export class McpGateway {
     }
 
     this.server = new Server(
-      { name: "trabecc", version: "0.1.0" },
+      { name: "trabecc", version: VERSION },
       { capabilities: { tools: {} } },
     );
 

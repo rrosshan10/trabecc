@@ -17,6 +17,7 @@
 
 import type { AuditRecord } from "../types.ts";
 import { createLogger } from "../log.ts";
+import { VERSION } from "../version.ts";
 
 const log = createLogger("cloud");
 
@@ -91,7 +92,7 @@ export class CloudSync {
         headers: {
           "content-type": "application/json",
           authorization: `Bearer ${this.opts.apiKey}`,
-          "x-trabecc-version": "0.1.0",
+          "x-trabecc-version": VERSION,
           "x-trabecc-install": this.installId,
           "x-trabecc-host": this.hostId,
         },
@@ -114,6 +115,19 @@ export class CloudSync {
           })),
         }),
       });
+      if (res.status === 402) {
+        // Plan limit reached. Retrying is pointless — surface the upgrade
+        // path loudly instead of silently eating the user's intent.
+        let upgradeUrl = "https://api.trabecc.com/signup";
+        let message = "cloud returned 402 Payment Required";
+        try {
+          const body = (await res.json()) as { message?: string; upgrade?: { url?: string } };
+          if (body.upgrade?.url) upgradeUrl = body.upgrade.url;
+          if (body.message) message = body.message;
+        } catch { /* body is optional */ }
+        log.warn(`${message} — dropping ${batch.length} buffered events. Upgrade: ${upgradeUrl}`);
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
     } catch (err) {
       // Re-queue with retry counter; drop after a few tries to avoid poisoning.

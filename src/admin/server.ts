@@ -18,6 +18,7 @@ import { expandHome } from "../config.ts";
 import { AuditStore } from "../audit/store.ts";
 import { PolicyEngine } from "../policy/engine.ts";
 import { createLogger } from "../log.ts";
+import { VERSION } from "../version.ts";
 import { renderDashboard } from "./dashboard.ts";
 
 const log = createLogger("admin");
@@ -31,7 +32,7 @@ export function startAdminServer(cfg: Config): { stop: () => Promise<void> } {
 
   const app = new Hono();
 
-  app.get("/api/health", (c) => c.json({ ok: true, version: "0.1.1" }));
+  app.get("/api/health", (c) => c.json({ ok: true, version: VERSION }));
 
   app.get("/api/timeseries", (c) => {
     const windowMinutes = Math.max(1, Number(c.req.query("windowMinutes") ?? 60));

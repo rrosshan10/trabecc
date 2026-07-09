@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { CloudSync } from "../src/audit/sync.ts";
 import type { AuditRecord } from "../src/types.ts";
+import { VERSION } from "../src/version.ts";
 
 function makeRecord(qualifiedName: string): AuditRecord {
   return {
@@ -104,7 +105,7 @@ describe("CloudSync", () => {
     await new Promise((r) => setImmediate(r));
     const h = headers[0]!;
     assert.equal(h["authorization"], "Bearer secret-123");
-    assert.equal(h["x-trabecc-version"], "0.1.0");
+    assert.equal(h["x-trabecc-version"], VERSION);
     assert.match(h["x-trabecc-install"]!, /^[0-9a-f]{8}$/);
   });
 });

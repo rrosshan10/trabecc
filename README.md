@@ -2,6 +2,8 @@
 
 > The gateway and governance layer for MCP. Audit, policy, and rate-limiting for every AI tool call.
 
+[![CI](https://github.com/rrosshan10/trabecc/actions/workflows/ci.yml/badge.svg)](https://github.com/rrosshan10/trabecc/actions/workflows/ci.yml) [![npm](https://img.shields.io/npm/v/trabecc)](https://www.npmjs.com/package/trabecc) [![license](https://img.shields.io/badge/license-MIT-dc143c)](LICENSE)
+
 Trabecc sits between your MCP client (Claude Desktop, Cursor, Claude Code, Continue, Cline, Zed, your own agent) and the MCP servers it talks to. From the client's perspective Trabecc **is** an MCP server — one server, presenting a single namespaced tool list. Internally it fans out to every upstream MCP server you've configured and intercepts every call.
 
 ```
@@ -32,7 +34,7 @@ Trabecc sits between your MCP client (Claude Desktop, Cursor, Claude Code, Conti
 
 ## Install
 
-Requires Node.js 24+ (uses `node:sqlite` and native TypeScript stripping).
+Requires Node.js 22.5+ for the published package (built-in `node:sqlite`); Node 24+ to run from source (native TypeScript stripping).
 
 ```bash
 npm install -g trabecc
@@ -121,6 +123,14 @@ Bound to `127.0.0.1` by default. Do not expose publicly without putting auth in 
 ## Why default-deny
 
 Your agent will run thousands of tool calls a day. The expected value of a single bad call (`fs__delete_file`, `slack__post_message`) is wildly negative; the cost of a denied benign call is a one-line policy edit. Default-deny is the only configuration that doesn't get someone fired.
+
+## Free cloud dashboard (optional)
+
+The OSS never phones home. If you want multi-host dashboards, retention, and
+centrally managed policies, get a free API key at
+[api.trabecc.com/signup](https://api.trabecc.com/signup) (1 host, 1,000
+events/day, no card required), then set `cloud.enabled: true` and
+`cloud.apiKey` in your `trabecc.yaml`.
 
 ## License
 
