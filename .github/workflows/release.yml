@@ -33,11 +33,14 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
 
-      # OIDC trusted publishing requires npm >= 11.5.1. Node 24 ships with
-      # 11.8 which is fine, but make it explicit so a Node bump can't
-      # silently regress this.
-      - name: Upgrade npm to latest (>= 11.5.1 required for OIDC trust)
-        run: npm install -g npm@latest
+      # OIDC trusted publishing requires npm >= 11.5.1. Node 24 bundles 11.8+,
+      # so assert instead of upgrading: an in-place `npm install -g npm@latest`
+      # corrupted the runner's npm tree once (MODULE_NOT_FOUND: 'sigstore').
+      - name: Assert npm >= 11.5.1 (required for OIDC trusted publishing)
+        run: |
+          v=$(npm --version); echo "npm $v"
+          [ "$(printf '%s\n' 11.5.1 "$v" | sort -V | head -1)" = "11.5.1" ] \
+            || { echo "npm $v is too old for OIDC trusted publishing"; exit 1; }
 
       - run: npm ci --no-audit --no-fund
 
